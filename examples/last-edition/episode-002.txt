@@ -1,0 +1,29 @@
+EPISODE NUMBER: Episode 2
+SCENE 01
+Scene heading: INT. PRINT ROOM — EARLY MORNING
+Scene start: 00:00.00
+Scene end: 00:32.00
+
+**ACTION:**
+Start: (00:00.00) | End: (00:06.00)
+A janitor opens the blinds beside a silent printing press.
+
+**ELI:**
+Start: (00:06.00) | End: (00:10.00)
+"The breakfast order is ready."
+
+**MAYA:**
+Start: (00:10.00) | End: (00:14.00)
+"Did they remember the tea?"
+
+**ELI:**
+Start: (00:15.00) | End: (00:18.00)
+"Yes. Yours is on the table."
+
+**MAYA:**
+Start: (00:19.00) | End: (00:22.00)
+"Thank you. That's exactly what I wanted."
+
+**CAMERA:**
+Start: (00:22.00) | End: (00:32.00)
+The two colleagues drink their tea in peaceful silence.

@@ -1,0 +1,59 @@
+EPISODE NUMBER: Episode 1
+EPISODE LOGLINE: Two journalists discover a problem with tomorrow's front page.
+
+SCENE 01
+Scene heading: INT. LOCAL NEWSPAPER PRINT ROOM — NIGHT
+Scene start: 00:00.00
+Scene end: 00:49.00
+
+**MAYA (urgent):**
+Start: (00:00.00) | End: (00:02.80)
+"Stop the press. You printed my obituary."
+
+**ACTION:**
+Start: (00:00.00) | End: (00:02.80)
+Maya slaps the damp front page on the typesetter's counter. Her own photograph stares up at her.
+
+**ELI:**
+Start: (00:03.00) | End: (00:05.80)
+"Your sister signed off on the proof herself."
+
+**CAMERA:**
+Start: (00:05.80) | End: (00:10.00)
+The red press light reflects in Maya's glasses as she looks at the byline.
+
+**MAYA:**
+Start: (00:10.00) | End: (00:13.50)
+"My sister died last winter. Show me the signature."
+
+**ACTION:**
+Start: (00:14.00) | End: (00:19.50)
+Eli pulls out a folder. A black envelope slides onto the floor.
+
+**ELI:**
+Start: (00:20.00) | End: (00:23.80)
+"She left another envelope for you. It's dated tomorrow."
+
+**MAYA:**
+Start: (00:24.00) | End: (00:27.00)
+"Then who just signed her name?"
+
+**ACTION:**
+Start: (00:27.00) | End: (00:30.00)
+The press-room door swings open and both journalists turn.
+
+**SISTER:**
+Start: (00:30.00) | End: (00:32.00)
+"I did."
+
+**CAMERA:**
+Start: (00:32.00) | End: (00:39.00)
+Maya's sister steps into the light and rests a hand on the counter.
+
+**MAYA:**
+Start: (00:39.00) | End: (00:43.00)
+"I buried you. I kept the death certificate."
+
+**SISTER:**
+Start: (00:44.00) | End: (00:49.00)
+"Look at the other signature on it."
