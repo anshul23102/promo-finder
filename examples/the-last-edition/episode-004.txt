@@ -1,0 +1,102 @@
+EPISODE NUMBER: Episode 4
+EPISODE LOGLINE: Maya fights the press for the ledger pages while Calloway drags her sister away.
+CONTINUITY NOTES: Resumes right after Episode 3's cliffhanger, seconds later.
+
+--- SCRIPT START ---
+
+SCENE 01
+Scene heading: INT. PRESS ROOM — CONTINUOUS
+Scene start: 00:00.00
+Scene end: 00:51.05
+
+Actions and dialogue:
+
+**ACTION:**
+Start: (00:00.00) | End: (00:03.64)
+Maya dives across the rollers. Her sleeve catches as the ledger is dragged under.
+
+**MAYA (screaming):**
+Start: (00:02.00) | End: (00:03.86)
+"Nora, pull me back!"
+
+**NORA:**
+Start: (00:04.21) | End: (00:06.75)
+"Let it go! It's only paper!"
+
+**MAYA:**
+Start: (00:07.10) | End: (00:08.62)
+"It's eleven names!"
+
+**CAMERA:**
+Start: (00:08.97) | End: (00:24.66)
+Eli scrambles up the gantry above the press toward the emergency stop.
+
+**ELI:**
+Start: (00:09.22) | End: (00:12.10)
+"Twelve seconds before it takes your arm!"
+
+**ACTION:**
+Start: (00:12.45) | End: (00:16.09)
+Calloway reappears, grabs Nora by the collar and hauls her toward the loading door.
+
+**CALLOWAY:**
+Start: (00:14.45) | End: (00:18.01)
+"Your sister made her choice. Now you make yours."
+
+**NORA:**
+Start: (00:18.36) | End: (00:20.90)
+"Maya, forget me! Save the pages!"
+
+**SOUND FX:**
+Start: (00:21.25) | End: (00:23.45)
+Metal screams as the rollers bite deeper.
+
+**ACTION:**
+Start: (00:21.85) | End: (00:25.49)
+Maya rips her sleeve free and snatches half-printed sheets out of the press's mouth.
+
+**CAMERA:**
+Start: (00:23.86) | End: (00:45.38)
+The sheets are still warm. Eleven names are stamped across them in wet ink, and one is crossed out.
+
+**MAYA:**
+Start: (00:24.11) | End: (00:26.99)
+"There's a twelfth name. Someone got out."
+
+**ELI:**
+Start: (00:27.34) | End: (00:28.74)
+"Who?"
+
+**ACTION:**
+Start: (00:29.09) | End: (00:31.69)
+Eli slams the emergency stop. The press groans and dies.
+
+**VANCE (from the doorway):**
+Start: (00:30.52) | End: (00:33.40)
+"Congratulations. You just held tomorrow's front page."
+
+**ACTION:**
+Start: (00:33.75) | End: (00:37.39)
+Vance raises his phone. The screen shows a live broadcast of this very room.
+
+**VANCE:**
+Start: (00:35.75) | End: (00:39.99)
+"Every reader in Meridian just watched you wreck Mr. Calloway's property."
+
+**MAYA:**
+Start: (00:40.34) | End: (00:42.20)
+"Where is my sister?"
+
+**ACTION:**
+Start: (00:42.55) | End: (00:45.15)
+Calloway holds up Nora's old press badge between two fingers.
+
+**CALLOWAY:**
+Start: (00:43.98) | End: (00:47.20)
+"The courts will find this on the arsonist."
+
+**CAMERA:**
+Start: (00:47.55) | End: (00:51.05)
+The loading door swings in the empty frame. Nora is gone.
+
+--- SCRIPT END ---

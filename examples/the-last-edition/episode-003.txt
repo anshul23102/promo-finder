@@ -1,0 +1,102 @@
+EPISODE NUMBER: Episode 3
+EPISODE LOGLINE: In the dark, Calloway offers the sisters a price for their silence and starts the press.
+CONTINUITY NOTES: Resumes right after Episode 2's cliffhanger, in the dark press room.
+
+--- SCRIPT START ---
+
+SCENE 01
+Scene heading: INT. PRESS ROOM — CONTINUOUS
+Scene start: 00:00.00
+Scene end: 01:01.19
+
+Actions and dialogue:
+
+**SOUND FX:**
+Start: (00:00.00) | End: (00:02.20)
+A match is struck in the dark.
+
+**CALLOWAY:**
+Start: (00:00.60) | End: (00:05.18)
+"Don't run. The doors lock from the outside once the press starts."
+
+**ACTION:**
+Start: (00:05.53) | End: (00:09.95)
+Red emergency lights flicker on. Eli lunges for the fuse box and two guards shove him back.
+
+**ELI (shouting):**
+Start: (00:07.96) | End: (00:10.16)
+"Get your hands off me!"
+
+**VANCE:**
+Start: (00:10.51) | End: (00:14.07)
+"Easy, Mr. Okafor. Nobody gets hurt before the deadline."
+
+**CAMERA:**
+Start: (00:14.42) | End: (00:41.62)
+Julian Vance, editor of the rival Courier, steps out of the shadows holding a stopwatch.
+
+**MAYA:**
+Start: (00:14.67) | End: (00:17.21)
+"Vance. You work for the Courier."
+
+**VANCE:**
+Start: (00:17.56) | End: (00:20.78)
+"I work for whoever buys the Ledger's debts."
+
+**CALLOWAY:**
+Start: (00:21.13) | End: (00:25.03)
+"Julian is my new partner. He breaks your story first."
+
+**NORA:**
+Start: (00:25.38) | End: (00:26.78)
+"Which story?"
+
+**CALLOWAY:**
+Start: (00:27.13) | End: (00:31.37)
+"The one where two reckless sisters burned down their own paper."
+
+**ACTION:**
+Start: (00:31.72) | End: (00:35.88)
+The ledger slides toward the edge of the counter. Nora kicks it under the press frame.
+
+**MAYA:**
+Start: (00:34.01) | End: (00:37.91)
+"You wouldn't bother framing us unless that ledger scared you."
+
+**CALLOWAY:**
+Start: (00:38.26) | End: (00:42.84)
+"Name your price. Walk out tonight, disappear, and Nora stays dead forever."
+
+**NORA:**
+Start: (00:43.19) | End: (00:44.71)
+"And the eleven?"
+
+**CALLOWAY:**
+Start: (00:45.06) | End: (00:47.60)
+"Eleven people can't read tomorrow's paper."
+
+**CAMERA:**
+Start: (00:47.95) | End: (01:01.19)
+Eli's hand creeps toward the release lever beneath the roller.
+
+**MAYA (low):**
+Start: (00:48.20) | End: (00:51.08)
+"Eli, whatever you're thinking, do it now."
+
+**SOUND FX:**
+Start: (00:51.43) | End: (00:53.63)
+The great press roars to life and shakes the floor.
+
+**ACTION:**
+Start: (00:52.03) | End: (00:55.93)
+Vance checks his stopwatch and sprints for the exit. Calloway follows without a glance back.
+
+**ELI:**
+Start: (00:54.17) | End: (00:57.39)
+"The ledger! The rollers are pulling it in!"
+
+**ACTION:**
+Start: (00:57.74) | End: (01:01.12)
+The scorched ledger slips from the frame and drops toward the spinning rollers.
+
+--- SCRIPT END ---

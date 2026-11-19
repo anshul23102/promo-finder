@@ -1,0 +1,106 @@
+EPISODE NUMBER: Episode 6
+EPISODE LOGLINE: Maya reaches the Courier basement and finds the one man she didn't expect to be hiding her sister.
+CONTINUITY NOTES: Resumes minutes after Maya escapes through the precinct vents.
+
+--- SCRIPT START ---
+
+SCENE 01
+Scene heading: INT. COURIER BASEMENT — MORNING
+Scene start: 00:00.00
+Scene end: 01:02.40
+
+Actions and dialogue:
+
+**ACTION:**
+Start: (00:00.00) | End: (00:03.64)
+Maya kicks open the basement door and a pistol is leveled at her face.
+
+**VANCE (calm):**
+Start: (00:02.00) | End: (00:04.20)
+"Put the pages down, Maya."
+
+**MAYA:**
+Start: (00:04.55) | End: (00:06.75)
+"You sold us to Calloway."
+
+**VANCE:**
+Start: (00:07.10) | End: (00:12.02)
+"If I wanted you dead, I'd have let the press take your arm."
+
+**CAMERA:**
+Start: (00:12.37) | End: (00:28.61)
+Vance lowers the pistol and nods toward a dim corner behind the old presses.
+
+**ACTION:**
+Start: (00:12.37) | End: (00:16.27)
+Nora steps out from behind a stack of newsprint, her wrist wrapped in a bandage.
+
+**NORA:**
+Start: (00:14.52) | End: (00:18.08)
+"He's telling the truth. I've been here since midnight."
+
+**MAYA (relieved):**
+Start: (00:18.43) | End: (00:19.83)
+"Nora!"
+
+**ACTION:**
+Start: (00:20.18) | End: (00:23.30)
+Maya crosses the floor and holds her sister's face in both hands.
+
+**VANCE:**
+Start: (00:21.89) | End: (00:26.81)
+"Calloway thinks I'm his partner. I've been feeding him lies for a year."
+
+**MAYA:**
+Start: (00:27.16) | End: (00:29.36)
+"Why would you help us?"
+
+**CAMERA:**
+Start: (00:29.71) | End: (00:58.70)
+Vance pulls a worn photograph from his wallet and sets it on the printing table.
+
+**VANCE:**
+Start: (00:29.96) | End: (00:35.22)
+"My brother worked the night shift at Pier Nine. He was the twelfth name."
+
+**MAYA:**
+Start: (00:35.57) | End: (00:38.11)
+"Reyes said the twelfth person survived."
+
+**VANCE:**
+Start: (00:38.46) | End: (00:41.00)
+"Reyes is wrong. Or she's lying."
+
+**ACTION:**
+Start: (00:41.35) | End: (00:43.55)
+Nora freezes and turns the photograph face down.
+
+**NORA:**
+Start: (00:42.56) | End: (00:47.82)
+"Don't trust Reyes. She wasn't at the fire. She was paid to be late."
+
+**VANCE:**
+Start: (00:48.17) | End: (00:52.07)
+"Then everything we've planned for tonight depends on one question."
+
+**MAYA:**
+Start: (00:52.42) | End: (00:53.82)
+"Which is?"
+
+**SOUND FX:**
+Start: (00:54.17) | End: (00:56.37)
+A heavy chain drags across the floor above the basement.
+
+**ACTION:**
+Start: (00:54.77) | End: (00:58.15)
+Calloway descends the stairs one step at a time, holding a printer's matchbook.
+
+**CALLOWAY (softly):**
+Start: (00:56.63) | End: (00:59.85)
+"You really thought I'd let you print it?"
+
+**SOUND FX:**
+Start: (01:00.20) | End: (01:02.40)
+Every gas valve along the basement wall begins to hiss.
+
+--- SCRIPT END ---

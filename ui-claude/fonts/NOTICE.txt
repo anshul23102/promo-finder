@@ -1,0 +1,7 @@
+Fonts in this folder are self-hosted, unmodified web subsets (woff2).
+
+Figtree            Copyright The Figtree Project Authors            https://github.com/erikdkennedy/figtree
+Bricolage Grotesque Copyright The Bricolage Grotesque Project Authors https://github.com/ateliertriay/bricolage
+
+Both are licensed under the SIL Open Font License, Version 1.1: https://openfontlicense.org
+The licence permits use, embedding and redistribution with this notice. The fonts are not sold on their own.

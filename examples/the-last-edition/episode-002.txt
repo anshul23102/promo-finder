@@ -1,0 +1,106 @@
+EPISODE NUMBER: Episode 2
+EPISODE LOGLINE: Maya reads the second signature on her sister's death certificate and learns who signed it.
+CONTINUITY NOTES: Resumes right after Episode 1's cliffhanger, in the same print room, minutes later.
+
+--- SCRIPT START ---
+
+SCENE 01
+Scene heading: INT. PRINT ROOM — NIGHT
+Scene start: 00:00.00
+Scene end: 01:04.50
+
+Actions and dialogue:
+
+**ACTION:**
+Start: (00:00.00) | End: (00:04.16)
+Maya snatches the death certificate from her sister's hand and holds it under the press light.
+
+**MAYA (stunned):**
+Start: (00:02.29) | End: (00:05.17)
+"H. Calloway. Our publisher signed your death."
+
+**NORA:**
+Start: (00:05.52) | End: (00:09.76)
+"He signed it three days before I was supposed to die."
+
+**CAMERA:**
+Start: (00:10.11) | End: (00:33.23)
+Nora lowers her voice while the press hums behind her.
+
+**ELI:**
+Start: (00:10.36) | End: (00:14.26)
+"That can't be right. Mr. Calloway hired both of you."
+
+**NORA:**
+Start: (00:14.61) | End: (00:17.83)
+"He hired us so he could watch us."
+
+**ACTION:**
+Start: (00:18.18) | End: (00:21.30)
+Nora unbuttons her coat and lays a scorched ledger on the counter.
+
+**NORA:**
+Start: (00:19.89) | End: (00:26.85)
+"Pier Nine. Eleven people died in that fire. This ledger shows who was paid to call it an accident."
+
+**MAYA:**
+Start: (00:27.20) | End: (00:30.76)
+"We ran that story. We called it an accident."
+
+**NORA:**
+Start: (00:31.11) | End: (00:35.35)
+"Because he wrote the headline before the fire department finished counting."
+
+**SOUND FX:**
+Start: (00:35.70) | End: (00:37.90)
+A phone rings in the empty newsroom upstairs.
+
+**CAMERA:**
+Start: (00:36.30) | End: (00:47.95)
+Eli glances at the ceiling. The ringing stops mid-note.
+
+**ELI:**
+Start: (00:36.55) | End: (00:40.11)
+"Nobody's up there. Nobody's been up there since eight."
+
+**MAYA (whispering):**
+Start: (00:40.46) | End: (00:42.32)
+"Then who answered it?"
+
+**ACTION:**
+Start: (00:42.67) | End: (00:45.01)
+Footsteps cross the floor above them, slow and unhurried.
+
+**NORA:**
+Start: (00:43.96) | End: (00:49.90)
+"He knew I was alive the whole time. He was waiting for me to come home."
+
+**CAMERA:**
+Start: (00:50.25) | End: (01:04.06)
+The stairwell door at the back of the press room begins to open.
+
+**ACTION:**
+Start: (00:50.25) | End: (00:53.37)
+Harlan Calloway steps in with tomorrow's front page folded under one arm.
+
+**CALLOWAY:**
+Start: (00:51.97) | End: (00:56.21)
+"Maya. Nora. Please, sit. I printed this for both of you."
+
+**ACTION:**
+Start: (00:56.56) | End: (01:00.20)
+He unfolds the page. The headline reads: BRANDT SISTERS DEAD IN PRESS ROOM FIRE.
+
+**MAYA:**
+Start: (00:58.56) | End: (01:00.08)
+"That hasn't happened."
+
+**CALLOWAY (pleasantly):**
+Start: (01:00.43) | End: (01:01.95)
+"Tonight it will."
+
+**SOUND FX:**
+Start: (01:02.30) | End: (01:04.50)
+Every light in the press room goes out at once.
+
+--- SCRIPT END ---

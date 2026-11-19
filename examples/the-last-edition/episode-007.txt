@@ -1,0 +1,102 @@
+EPISODE NUMBER: Episode 7
+EPISODE LOGLINE: The sisters must print the truth in ninety seconds while the basement fills with gas.
+CONTINUITY NOTES: Resumes seconds after Calloway opens the gas lines.
+
+--- SCRIPT START ---
+
+SCENE 01
+Scene heading: INT. COURIER BASEMENT — CONTINUOUS
+Scene start: 00:00.00
+Scene end: 00:59.42
+
+Actions and dialogue:
+
+**ACTION:**
+Start: (00:00.00) | End: (00:03.38)
+Calloway strikes a match and holds it just short of the open gas.
+
+**CALLOWAY (smiling):**
+Start: (00:01.86) | End: (00:06.10)
+"Ninety seconds. Print the story and you light this room yourself."
+
+**VANCE:**
+Start: (00:06.45) | End: (00:09.33)
+"He's bluffing. He wants us to run."
+
+**NORA:**
+Start: (00:09.68) | End: (00:12.56)
+"He's not bluffing. Look at his hand."
+
+**CAMERA:**
+Start: (00:12.91) | End: (00:39.40)
+The match burns a bright line toward Calloway's fingers. He doesn't flinch.
+
+**MAYA:**
+Start: (00:13.16) | End: (00:16.04)
+"Why would you die for a cover-up?"
+
+**CALLOWAY:**
+Start: (00:16.39) | End: (00:20.29)
+"Because my name is the only one on every signature."
+
+**ACTION:**
+Start: (00:20.64) | End: (00:23.76)
+Eli bursts through the cellar window and drops beside the press, panting.
+
+**ELI:**
+Start: (00:22.36) | End: (00:27.28)
+"I rerouted the Ledger's engine. The press runs on the Courier's power now."
+
+**MAYA:**
+Start: (00:27.63) | End: (00:30.17)
+"How long to a full run?"
+
+**ELI:**
+Start: (00:30.52) | End: (00:32.72)
+"Forty seconds if nothing jams."
+
+**ACTION:**
+Start: (00:33.07) | End: (00:36.71)
+Maya feeds the half-burned ledger pages into the flatbed and slaps the start plate.
+
+**SOUND FX:**
+Start: (00:35.07) | End: (00:37.27)
+The Courier's old press shudders and begins to turn.
+
+**CALLOWAY (panicking):**
+Start: (00:35.67) | End: (00:38.89)
+"Stop! Do you know what's in those pages?"
+
+**NORA:**
+Start: (00:39.24) | End: (00:41.78)
+"Eleven names and one lie. Yours."
+
+**CAMERA:**
+Start: (00:42.13) | End: (00:59.21)
+The match drops. Vance dives and smothers it under his coat a hair from the gas.
+
+**ACTION:**
+Start: (00:42.13) | End: (00:46.29)
+Reyes appears at the stairs with her weapon drawn and her badge in her other hand.
+
+**REYES:**
+Start: (00:44.42) | End: (00:48.66)
+"Harlan Calloway, you're under arrest for the murder of eleven people."
+
+**CALLOWAY:**
+Start: (00:49.01) | End: (00:51.55)
+"Dana. You signed the certificates too."
+
+**ACTION:**
+Start: (00:51.90) | End: (00:56.32)
+The press spits out the first copy. Maya holds it up. The headline names Calloway, and Reyes.
+
+**REYES (pleading):**
+Start: (00:54.33) | End: (00:56.87)
+"Maya, don't read the second paragraph."
+
+**SOUND FX:**
+Start: (00:57.22) | End: (00:59.42)
+Behind them, the stairwell door slams shut and locks.
+
+--- SCRIPT END ---

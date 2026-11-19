@@ -53,10 +53,23 @@ Outputs land in `private/runs/<time>/`: `index.html` (review page), `posting_pla
 
 Tests: `python3 -m unittest discover -s tests`
 
+## The cutting room (review UI)
+
+A local web app for reviewing a finished run: a vertical reel that plays the script as captions, a 3-second gate, a trim timeline that snaps to clean line breaks, a season strip, and a blind mode. Code lives in `ui-claude/`.
+
+- **Try it now, no setup:** [live demo](https://anshul23102.github.io/promo-finder/) with a made-up show (`examples/the-last-edition/`, seven episodes). The demo data is synthetic; it contains no Kuku content.
+- **View your own run (stays on your machine):**
+
+```bash
+python3 ui-claude/serve.py --run private/runs/<your-run> --pack path/to/scripts.zip
+```
+
+It builds `private/ui-claude/` and serves 127.0.0.1 only. The built `data.js` contains script text, so keep it out of anything you publish. Fonts: Figtree and Bricolage Grotesque, SIL OFL (`ui-claude/fonts/NOTICE.txt`).
+
 ## Limits
 
 - It reads screenplays, not footage. It can't see whether a look lands, how fast a line is delivered, or whether a viewer really stops scrolling.
 - The cold viewer and the ranking judge are models standing in for people. The quality report says how often they agree with the writers' own cliffhangers and with blind reference cuts, not how promos perform.
 - Screenplay timestamps may drift from the final edit.
 
-The supplied show is Kuku's confidential content and is not in this repository. `examples/` holds two original, made-up episodes for demos.
+The supplied show is Kuku's confidential content and is not in this repository. `examples/` holds original, made-up episodes for demos.

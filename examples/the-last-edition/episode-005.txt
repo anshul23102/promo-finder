@@ -1,0 +1,102 @@
+EPISODE NUMBER: Episode 5
+EPISODE LOGLINE: A detective shows Maya the real cause of Nora's death and a twelfth name that changes everything.
+CONTINUITY NOTES: Resumes at dawn the morning after the press room fight.
+
+--- SCRIPT START ---
+
+SCENE 01
+Scene heading: INT. PRECINCT INTERVIEW ROOM — DAWN
+Scene start: 00:00.00
+Scene end: 01:09.31
+
+Actions and dialogue:
+
+**ACTION:**
+Start: (00:00.00) | End: (00:03.64)
+Detective Reyes slams a photo of the burned ledger pages onto the metal table.
+
+**REYES:**
+Start: (00:02.00) | End: (00:06.92)
+"Thirty seconds. Tell me why your sister's badge was found at an arson."
+
+**MAYA:**
+Start: (00:07.27) | End: (00:09.47)
+"She's alive. Calloway took her."
+
+**REYES:**
+Start: (00:09.82) | End: (00:13.38)
+"Nora Brandt is dead. I signed her autopsy report."
+
+**CAMERA:**
+Start: (00:13.73) | End: (00:43.06)
+Maya stares at the report. The second signature on the death certificate is Reyes's own.
+
+**MAYA:**
+Start: (00:13.98) | End: (00:16.86)
+"Then you know the body wasn't hers."
+
+**REYES:**
+Start: (00:17.21) | End: (00:22.13)
+"I know it arrived wearing a Ledger press badge sewn into the coat."
+
+**ACTION:**
+Start: (00:22.48) | End: (00:26.12)
+Reyes slides a coroner's page across the table. One line is circled in red.
+
+**REYES:**
+Start: (00:24.48) | End: (00:30.42)
+"Cause of death, ink inhalation. Nobody dies of that unless they're locked in a print room."
+
+**MAYA:**
+Start: (00:30.77) | End: (00:34.67)
+"Eleven people died at Pier Nine, and not from smoke."
+
+**REYES:**
+Start: (00:35.02) | End: (00:36.54)
+"Then from what?"
+
+**MAYA:**
+Start: (00:36.89) | End: (00:41.47)
+"Solvent. They were locked inside a warehouse full of the Ledger's paper."
+
+**ACTION:**
+Start: (00:41.82) | End: (00:45.72)
+Reyes crosses to the door, locks it and switches off the camera in the corner.
+
+**REYES:**
+Start: (00:43.97) | End: (00:47.19)
+"Then listen carefully. Calloway owns half this department."
+
+**CAMERA:**
+Start: (00:47.54) | End: (01:07.19)
+Reyes's hand trembles as she unbuttons her cuff and shows a burn scar up her forearm.
+
+**REYES (barely audible):**
+Start: (00:47.79) | End: (00:54.07)
+"The twelfth name on your page is mine. I never died. I'm the one who got out."
+
+**SOUND FX:**
+Start: (00:54.42) | End: (00:56.62)
+The door handle rattles from the corridor.
+
+**CALLOWAY (from outside):**
+Start: (00:55.02) | End: (00:57.56)
+"Detective, your suspect has a lawyer."
+
+**REYES (whispering):**
+Start: (00:57.91) | End: (01:01.13)
+"Run. Take those pages to the Courier basement."
+
+**ACTION:**
+Start: (01:01.48) | End: (01:04.60)
+The ceiling vent drops open. Maya hauls herself up into the dark.
+
+**MAYA:**
+Start: (01:03.20) | End: (01:05.40)
+"The Courier? That's Vance's building."
+
+**REYES:**
+Start: (01:05.75) | End: (01:09.31)
+"Exactly. It's the one place Calloway will never look."
+
+--- SCRIPT END ---
