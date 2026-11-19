@@ -7,8 +7,9 @@ the brief's hard rules: 20-60 seconds in total, the hook lands inside the first
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from itertools import islice
 
-from .screenplay import Cue, Episode, clean_edges, cue_ref, stamp
+from .screenplay import Cue, Episode, clean_edges, cue_ref, stamp, story_beats_after
 
 MIN_LEN, MAX_LEN, HOOK_WINDOW, MIN_SEGMENT = 2000, 6000, 300, 500  # centiseconds
 
@@ -55,6 +56,18 @@ def opens_mid_sentence(ep: Episode, start: int) -> bool:
     return bool(first) and first.text.lstrip(' "\u201c\u2018\'').startswith(("...", "\u2026"))
 
 
+def ends_mid_sentence(ep: Episode, end: int) -> bool:
+    """A timed cue can end in the middle of a sentence split into two cues."""
+    spoken = [cue for cue in ep.cues if cue.kind == "dialogue"]
+    before = max((cue for cue in spoken if cue.end <= end), key=lambda cue: cue.end, default=None)
+    after = next((cue for cue in spoken if cue.start >= end), None)
+    if before is None or after is None:
+        return False
+    return (before.speaker.casefold() == after.speaker.casefold()
+            and after.start - before.end <= 150
+            and after.text.lstrip(' "“‘\'').startswith(("...", "…")))
+
+
 def _shot_start(ep: Episode, t: int, edges: set[int]) -> int | None:
     """Latest legal start at or before t, but no more than 3 s before it."""
     options = [c.start for c in ep.cues if c.start in edges and t - HOOK_WINDOW <= c.start <= t]
@@ -80,7 +93,7 @@ def _shot_end(ep: Episode, t: int, edges: set[int], limit: int) -> int | None:
     return candidates[0]
 
 
-def build(ep: Episode, hook: Cue, closing: Cue, source: str) -> tuple[Cut | None, str]:
+def build(ep: Episode, hook: Cue, closing: Cue, source: str, *, preserve_ending: bool = False) -> tuple[Cut | None, str]:
     """One continuous cut from the hook cue to the closing cue, or the reason it fails."""
     if closing.end <= hook.start:
         return None, "closing cue comes before the hook"
@@ -88,7 +101,12 @@ def build(ep: Episode, hook: Cue, closing: Cue, source: str) -> tuple[Cut | None
     start = _shot_start(ep, hook.start, edges)
     if start is None:
         return None, "no clean cut point within 3 s before the hook"
-    end = _shot_end(ep, closing.end, edges, start + MAX_LEN)
+    if preserve_ending:
+        if closing.end not in edges or not MIN_LEN <= closing.end - start <= MAX_LEN:
+            return None, "the proposed ending has no clean 20–60 second cut"
+        end = closing.end
+    else:
+        end = _shot_end(ep, closing.end, edges, start + MAX_LEN)
     if end is None:
         earliest = next((c for c in ep.cues if c.kind in ("dialogue", "action") and c.start >= closing.end - MAX_LEN + 100), None)
         hint = f"; to fit, first_cue must be {cue_ref(ep, earliest)} or later" if earliest else ""
@@ -105,6 +123,8 @@ def build(ep: Episode, hook: Cue, closing: Cue, source: str) -> tuple[Cut | None
         end = later[0]
     if opens_mid_sentence(ep, start):
         return None, "opens on a line that continues an earlier sentence"
+    if ends_mid_sentence(ep, end):
+        return None, "ends before the same speaker finishes the sentence"
     cut = Cut([Segment(ep.number, start, end)], cue_ref(ep, hook), cue_ref(ep, closing), source, notes)
     return cut, "ok"
 
@@ -126,6 +146,8 @@ def join(parts: list[tuple[Episode, Cue, Cue]], source: str = "joined") -> tuple
             return None, f"moment {i + 1} is only {(end - start) / 100:.1f} s; each moment needs at least 5 s"
         if opens_mid_sentence(ep, start):
             return None, f"moment {i + 1} opens on a line that continues an earlier sentence"
+        if ends_mid_sentence(ep, end):
+            return None, f"moment {i + 1} ends before the same speaker finishes the sentence"
         segments.append(Segment(ep.number, start, end))
     order = [(s.episode, s.start) for s in segments]
     if order != sorted(order) or any(a.episode == b.episode and a.end > b.start for a, b in zip(segments, segments[1:])):
@@ -155,5 +177,4 @@ def cues_in(ep: Episode, seg: Segment) -> list[Cue]:
 
 def following(ep: Episode, seg: Segment, count: int = 3) -> list[Cue]:
     """What a viewer would see next if the clip kept running (dialogue/action first)."""
-    later = [c for c in ep.cues if c.start >= seg.end and c.kind in ("dialogue", "action")]
-    return later[:count]
+    return list(islice(story_beats_after(ep, seg.end), count))

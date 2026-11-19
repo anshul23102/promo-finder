@@ -7,14 +7,13 @@ provider's key) as a secret, or paste a key in the sidebar for this session only
 """
 from __future__ import annotations
 
-import atexit
 import io
 import json
-import shutil
 import os
 from pathlib import Path
 import tempfile
 import zipfile
+from uuid import uuid4
 
 import streamlit as st
 
@@ -27,14 +26,16 @@ st.title("Promo Finder")
 st.caption("Reads timestamped microdrama screenplays and finds 20-60 s promos that open on a hook, "
            "end on a cliffhanger and make sense to a stranger. Code owns every timestamp; a human makes the final call.")
 
+available_providers = ["gemini", "groq", "openrouter", "openai"]
 with st.sidebar:
     st.header("Model")
-    provider = st.selectbox("Editor model", ["gemini", "groq", "openrouter", "openai", "openai-compatible", "ollama", "rules"],
-                            help="'rules' runs the no-AI baseline. 'openai-compatible' takes any endpoint, e.g. one Kuku provides.")
+    provider = st.selectbox("Editor model", ["rules", *available_providers],
+                            help="Rules mode runs without API access. Use the CLI for Ollama or a custom endpoint.")
     name = st.text_input("Model name (blank = default)",
-                         value="" if provider == "rules" else "", placeholder=(PRESETS.get(provider, (None, None, ""))[2] or ""))
+                         value="", placeholder=(PRESETS.get(provider, (None, None, ""))[2] or ""))
     judge = st.text_input("Judge model (blank = same)", placeholder="e.g. gemini:gemini-flash-lite-latest or groq")
-    base_url = st.text_input("Base URL", os.environ.get("PROMO_BASE_URL", "")) if provider == "openai-compatible" else None
+    if provider != "rules":
+        st.caption("AI mode sends screenplay text to your model provider. Use material permitted by its terms. Google’s unpaid Gemini API terms say not to submit confidential information.")
     key_var = PRESETS.get(provider, (None, None))[1]
     typed_key = None
     if key_var:
@@ -51,38 +52,45 @@ uploads = st.file_uploader("Screenplays: one ZIP, or several .txt episodes", typ
 demo = st.checkbox("No file? Use the built-in demo (two original, made-up episodes)", value=False)
 
 if st.button("Find promos", type="primary", disabled=not (uploads or demo) or bool(key_var and not (typed_key or os.environ.get(key_var)))):
-    work = Path(tempfile.mkdtemp(prefix="promo-"))  # private to this run; deleted when the session ends
-    if demo and not uploads:
-        source = DEMO
-    elif len(uploads) == 1 and uploads[0].name.lower().endswith(".zip"):
-        source = work / "input.zip"
-        source.write_bytes(uploads[0].getvalue())
-    else:
-        source = work / "input"
-        source.mkdir()
-        for f in uploads:
-            (source / Path(f.name).name).write_bytes(f.getvalue())
-    out = work / "run"
-    argv = [str(source), "--model", provider if not name else f"{provider}:{name}", "--out", str(out),
-            "--cache", str(work / "cache"), "--rounds", str(rounds),
-            "--title", Path(uploads[0].name).stem if uploads else "Demo: The Last Edition"]
-    if provider == "rules":
-        argv[2] = "rules"
-    if judge:
-        argv += ["--judge", judge]
-    if episodes:
-        argv += ["--episodes", episodes]
-    if fast:
-        argv += ["--no-rules-check"]
+    if "workspace" not in st.session_state:
+        st.session_state["workspace"] = tempfile.TemporaryDirectory(prefix="promo-")
+    workspace = Path(st.session_state["workspace"].name)
+    st.session_state.pop("out", None)
     status = st.status("Working ...", expanded=True)
     try:
-        run.main(argv, key=typed_key, base_url=base_url or None, log_fn=status.write)
-        status.update(label="Done", state="complete")
+        if judge and judge.partition(":")[0] not in available_providers:
+            raise ValueError("Choose a supported hosted judge provider or leave it blank.")
+        if len({f.name.casefold() for f in uploads}) != len(uploads):
+            raise ValueError("Each uploaded file needs a unique name.")
+        if any(f.name.lower().endswith(".zip") for f in uploads) and len(uploads) != 1:
+            raise ValueError("Upload a single ZIP or a set of TXT files.")
+        out = workspace / uuid4().hex
+        with tempfile.TemporaryDirectory(dir=workspace, prefix="input-") as upload_dir:
+            work = Path(upload_dir)
+            if demo and not uploads:
+                source = DEMO
+            elif uploads[0].name.lower().endswith(".zip"):
+                source = work / "input.zip"
+                source.write_bytes(uploads[0].getvalue())
+            else:
+                source = work
+                for f in uploads:
+                    (source / Path(f.name).name).write_bytes(f.getvalue())
+            argv = [str(source), "--model", provider if not name or provider == "rules" else f"{provider}:{name}",
+                    "--out", str(out), "--cache", str(workspace / "cache"), "--rounds", str(rounds),
+                    "--title", Path(uploads[0].name).stem if uploads else "Demo: The Last Edition"]
+            if judge:
+                argv += ["--judge", judge]
+            if episodes:
+                argv += ["--episodes", episodes]
+            if fast:
+                argv += ["--no-rules-check"]
+            run.main(argv, key=typed_key, log_fn=status.write)
         st.session_state["out"] = str(out)
-        atexit.register(shutil.rmtree, work, ignore_errors=True)
-    except Exception as exc:  # show the reason instead of a stack trace
+        status.update(label="Done", state="complete")
+    except Exception as exc:
         status.update(label="Stopped", state="error")
-        st.error(f"{exc}\n\nFinished model answers are cached: press the button again to resume.")
+        st.error(f"{exc}\n\nCompleted model calls can be reused when you retry in this browser session.")
 
 if "out" in st.session_state and Path(st.session_state["out"]).is_dir():
     out = Path(st.session_state["out"])
@@ -91,16 +99,26 @@ if "out" in st.session_state and Path(st.session_state["out"]).is_dir():
     a, b, c, d = st.columns(4)
     a.metric("Episodes", summary["episodes"])
     b.metric("Candidates", summary["candidates"])
-    c.metric("Passed checks", summary["passed"])
+    c.metric("Timing-checked" if summary["judge_model"] == "none" else "Viewer shortlist", summary["passed"])
     d.metric("Rule violations", summary["rule_violations"])
-    tab_plan, tab_review, tab_quality, tab_files = st.tabs(["Posting plan", "Review clips", "Quality", "Download"])
+    tab_plan, tab_review, tab_coverage, tab_quality, tab_files = st.tabs(
+        ["Posting plan", "Review clips", "Episode coverage", "Quality", "Download"]
+    )
     with tab_plan:
         rows = [{"#": p["rank"], "slot": p["plan"], "segments": "; ".join(f"E{s['episode']} {s['start']}-{s['end']}" for s in p["segments"]),
                  "sec": p["duration_s"], "hook": p["hook"], "cliffhanger": p["cliffhanger"], "why": p["why"]}
                 for p in data["promos"]]
-        st.dataframe(rows, use_container_width=True, hide_index=True)
+        st.dataframe(rows, width="stretch", hide_index=True)
     with tab_review:
         st.components.v1.html((out / "index.html").read_text(), height=1100, scrolling=True)
+    with tab_coverage:
+        coverage = json.loads((out / "coverage.json").read_text())
+        st.dataframe([
+            {"Episode": row["episode"], "Outcome": row["status"], "Reason": row["reason"],
+             "Cut": " / ".join(f"{s['start']}–{s['end']}" for s in (row["cut"] or {}).get("segments", []))}
+            for row in coverage
+        ], width="stretch", hide_index=True)
+        st.caption("Open Episode coverage below the review queue to inspect script evidence.")
     with tab_quality:
         st.markdown((out / "evaluation.md").read_text())
     with tab_files:

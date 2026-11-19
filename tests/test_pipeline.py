@@ -71,6 +71,19 @@ class CutTest(unittest.TestCase):
 
 
 class NewRuleTest(unittest.TestCase):
+    def test_rejects_cut_between_two_cues_of_one_sentence(self):
+        from dataclasses import replace
+
+        ep = episode()
+        start = cue(ep, '"Line 1?"')
+        end = cue(ep, '"Line 6?"')
+        next_line = cue(ep, '"Line 7?"')
+        ep.cues[ep.cues.index(next_line)] = replace(next_line, speaker=end.speaker,
+                                                      text='"...the same sentence."')
+        cut, reason = build(ep, start, end, "beats", preserve_ending=True)
+        self.assertIsNone(cut)
+        self.assertIn("finishes the sentence", reason)
+
     def test_rejects_dangling_opening_and_micro_segments(self):
         ep = episode()
         ep.cues[1] = Cue(2, 50, 400, "dialogue", "TOM", '"...and it isn\'t you."', 1)
@@ -87,12 +100,82 @@ class NewRuleTest(unittest.TestCase):
         self.assertIn("at least 5 s", why)
 
 
+class RecoveryTest(unittest.TestCase):
+    def test_skips_already_reviewed_intervals_and_repeated_openings(self):
+        from unittest.mock import patch
+        from promo.run import recovery_cuts
+
+        rows = [{"cut": Cut([Segment(1, start, end)], hook, "", "recovery")}
+                for start, end, hook in [(0, 2500, "A"), (100, 2500, "B"),
+                                         (100, 3500, "B"), (200, 3500, "C")]]
+        with patch("promo.run.rules_cuts", return_value=rows):
+            actual = recovery_cuts(episode(), {rows[0]["cut"].key})
+        self.assertEqual(actual, [rows[1], rows[3]])
+
+
+class CoverageTest(unittest.TestCase):
+    def test_records_passed_review_needed_and_no_eligible_cut(self):
+        from unittest.mock import patch
+        from promo.coverage import episode_coverage
+
+        eps = {n: episode(n) for n in (1, 2, 3)}
+        passed = [{"rank": 1, "segments": [Segment(1, 0, 3000).as_dict()]}]
+        candidate = {"segments": [Segment(2, 100, 3100).as_dict()]}
+        rejected = [{"episode": 2, "why_rejected": "ending resolved"}]
+        with patch("promo.coverage.best_review_candidate", side_effect=[candidate, None]):
+            result = episode_coverage(eps, passed, rejected)
+        self.assertEqual([row["status"] for row in result],
+                         ["Viewer passed", "Review needed", "No eligible cut"])
+        self.assertEqual(result[1]["reason"], "ending resolved")
+        self.assertIsNone(result[2]["cut"])
+
+    def test_recovery_preserves_the_exact_ending_cue(self):
+        ep = episode()
+        opening = cue(ep, '"Line 1?"')
+        closing = cue(ep, '"Line 6?"')
+        repaired, _ = build(ep, opening, closing, "recovery", preserve_ending=True)
+        self.assertIsNotNone(repaired)
+        self.assertEqual(repaired.segments[0].end, closing.end)
+        short, _ = build(ep, opening, cue(ep, '"Line 2?"'), "recovery", preserve_ending=True)
+        self.assertIsNone(short)
+
+
 class RankingTest(unittest.TestCase):
     def test_bradley_terry_orders_a_consistent_winner_first(self):
         wins = {(0, 1): 3, (1, 2): 3, (0, 2): 3}
         p = bradley_terry(3, wins)
         self.assertGreater(p[0], p[1])
         self.assertGreater(p[1], p[2])
+
+    def test_cold_viewer_uses_source_labels_and_ignores_show_guide(self):
+        from unittest.mock import Mock
+        from promo.ai import viewer
+
+        ep = episode()
+        ep.logline = "Unseen context"
+        cut, _ = build(ep, cue(ep, '"Line 1?"'), cue(ep, '"Line 6?"'), "editor")
+        model = Mock()
+        viewer(model, cut, {ep.number: ep})
+        prompt = model.ask.call_args.args[2]
+        self.assertIn("MIA:", prompt)
+        self.assertNotIn("E01-", prompt)
+        self.assertNotIn(ep.logline, prompt)
+
+    def test_incomplete_ranking_ballot_contributes_no_votes(self):
+        from unittest.mock import Mock
+        from promo.ai import rank
+
+        ep = episode()
+        cuts = [Cut([Segment(1, 0, 2000)], "", "", "rules"),
+                Cut([Segment(1, 2000, 4000)], "", "", "rules")]
+        model = Mock()
+        model.ask.return_value = {"answer": {"order": ["A", "A"]}, "model": "fixture"}
+        raw = []
+        result = rank(model, cuts, {1: ep}, rounds=1, raw=raw)
+        self.assertEqual(raw, [model.ask.return_value])
+        self.assertEqual(result["comparisons"], 0)
+        self.assertEqual(result["strength"], [1.0, 1.0])
+        self.assertEqual(result["rounds"][0]["excluded"], "incomplete ballot")
 
     def test_viewer_gate(self):
         good = {"first_3s": "stop", "makes_sense": "yes", "ending": "unresolved", "open_question": "Will he answer?"}
@@ -141,6 +224,30 @@ class RuleCheckTest(unittest.TestCase):
         self.assertIn("first 3 seconds", problems)
 
 
+class ResilientRunTest(unittest.TestCase):
+    def test_provider_outage_exports_review_outcomes_without_viewer_passes(self):
+        import json
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from unittest.mock import patch
+        from promo.llm import ModelError
+        from promo.run import main
+
+        source = Path(__file__).resolve().parents[1] / "examples" / "last-edition"
+        with TemporaryDirectory() as temp:
+            out = Path(temp) / "output"
+            args = [str(source), "--model", "ollama:fixture", "--out", str(out)]
+            with (patch("promo.beats.score_beats", side_effect=ModelError("finder offline")),
+                  patch("promo.ai.viewer", side_effect=ModelError("judge offline"))):
+                main(args, log_fn=lambda _: None)
+            self.assertEqual(json.loads((out / "promos.json").read_text())["promos"], [])
+            coverage = json.loads((out / "coverage.json").read_text())
+            self.assertEqual([r["status"] for r in coverage], ["Review needed", "No eligible cut"])
+            self.assertIn("Cold viewer unavailable", (out / "evaluation.md").read_text())
+            with self.assertRaisesRegex(ValueError, "already contains a run"):
+                main(args, log_fn=lambda _: None)
+
+
 class SchemaTest(unittest.TestCase):
     def test_check_and_lenient_json(self):
         schema = obj(order=array(string("A", "B")), reason=string())
@@ -152,3 +259,29 @@ class SchemaTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BeatSearchTest(unittest.TestCase):
+    def test_search_pairs_strong_opening_with_strong_ending_inside_the_rules(self):
+        from promo.beats import search
+        ep = episode()
+        beats = [{"cue": "E01-004", "hook": 3, "cliff": 0, "question": "A shocking line"},
+                 {"cue": "E01-014", "hook": 0, "cliff": 3, "question": "Will he answer?"},
+                 {"cue": "E01-028", "hook": 0, "cliff": 3, "question": "Too far away"},
+                 {"cue": "E01-999", "hook": 3, "cliff": 3, "question": "Not a real cue"}]
+        picked, stats = search(ep, beats)
+        self.assertEqual(stats["hooks"], 1)               # the made-up cue is ignored
+        self.assertEqual(len(picked), 1)                  # 004 -> 028 would be over 60 s
+        cut = picked[0]["cut"]
+        self.assertEqual((cut.hook_ref, cut.end_ref), ("E01-004", "E01-014"))
+        self.assertTrue(2000 <= cut.length <= 6000)
+        self.assertIn("Will he answer?", picked[0]["why"])
+
+
+class SubsetLabelTest(unittest.TestCase):
+    def test_writer_labels_survive_a_subset_run(self):
+        from promo.evaluate import evaluate
+        e1, e2 = episode(1), episode(2)
+        e2.continuity = "Resumes after Episode 1's climax, when the lantern goes out."
+        result = evaluate([], [], [e1], None, {}, [], all_episodes=[e1, e2])  # run only episode 1; note lives in episode 2
+        self.assertEqual(result["writer_cliffhangers"]["labels"], 1)

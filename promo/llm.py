@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import hashlib
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -20,7 +21,11 @@ import random
 import re
 import tempfile
 import time
+import socket
 from urllib import error, request
+from urllib.parse import urlparse
+
+TOKENS_PER_MINUTE = {"groq": 8000}  # free-plan cap per model; paced client-side so calls do not just bounce off 429s
 
 PRESETS = {
     # name: (base URL, API key variable, default model, requests per minute)
@@ -35,6 +40,21 @@ PRESETS = {
 
 class ModelError(RuntimeError):
     pass
+
+
+def public_https(url: str) -> str:
+    """Refuse a visitor-supplied endpoint unless it is HTTPS on a public internet address (blocks SSRF
+    into localhost, private networks and cloud metadata). Environment-configured URLs are trusted."""
+    parts = urlparse(url)
+    if parts.scheme != "https" or not parts.hostname:
+        raise ValueError("A custom endpoint must be an https:// URL")
+    try:
+        addresses = {info[4][0] for info in socket.getaddrinfo(parts.hostname, parts.port or 443)}
+    except OSError as exc:
+        raise ValueError(f"Cannot resolve {parts.hostname}") from exc
+    if not addresses or not all(ipaddress.ip_address(a.split("%")[0]).is_global for a in addresses):
+        raise ValueError("A custom endpoint must be on the public internet, not a private or local address")
+    return url
 
 
 def load_dotenv(path: Path = Path(".env")) -> None:
@@ -142,6 +162,8 @@ class Model:
     tokens_in: int = 0
     tokens_out: int = 0
     _last: float = 0.0
+    _skip_until: dict = field(default_factory=dict)
+    _window: list = field(default_factory=list)  # (time, tokens) of recent calls, for per-minute token caps
 
     def __post_init__(self):
         provider, _, name = self.spec.partition(":")
@@ -150,6 +172,8 @@ class Model:
         base, key_var, default, rpm = PRESETS[provider]
         self.names = [n.strip() for n in (name or default or "").split("|") if n.strip()]
         self.provider, self.name = provider, (self.names[0] if self.names else "")
+        if self.base_url:
+            public_https(self.base_url)
         self.base = self.base_url or (os.environ.get("PROMO_BASE_URL") if provider == "openai-compatible" else base) or ""
         if provider == "ollama":
             self.base = os.environ.get("OLLAMA_HOST_URL", base)
@@ -173,7 +197,15 @@ class Model:
     def ask(self, stage: str, system: str, user: str, schema: dict, **kwargs) -> dict:
         """Try each model in the chain; fall through only on overload, rate limit or network errors."""
         last = None
-        for name in self.names:
+        now = time.monotonic()
+        # Circuit breaker: a model that just timed out or was overloaded is skipped for a while, unless it is the last option.
+        live = [n for n in self.names if self._skip_until.get(n, 0) <= now] or self.names[-1:]
+        for name in self.names:  # reproducible re-runs: reuse any chain member's saved answer before calling anyone
+            self.name = name
+            hit = self._cached(stage, system, user, schema, **kwargs)
+            if hit:
+                return hit
+        for name in live:
             self.name = name
             try:
                 return self._ask(stage, system, user, schema, **kwargs)
@@ -181,11 +213,11 @@ class Model:
                 last = exc
                 if not re.search(r"HTTP (404|408|429|5\d\d)|could not reach|kept rate-limiting", str(exc)):
                     raise
+                if len(self.names) > 1:
+                    self._skip_until[name] = time.monotonic() + 300
         raise last
 
-    def _ask(self, stage: str, system: str, user: str, schema: dict, *, temperature: float = 0.0,
-             seed: int = 7, max_tokens: int = 4000) -> dict:
-        """Return {'answer': validated JSON, 'raw': text, ...}; cached by exact request."""
+    def _request(self, stage, system, user, schema, temperature=0.0, seed=7, max_tokens=4000):
         messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
         if self.local:
             url = self.base + "/api/chat"
@@ -198,15 +230,44 @@ class Model:
                     "response_format": {"type": "json_schema", "json_schema": {"name": stage, "schema": fmt, "strict": self.provider != "gemini"}}}
             if self.provider != "gemini":
                 body["seed"] = seed
+            if self.provider == "groq":
+                body["max_completion_tokens"] = max(max_tokens, 6000)  # bounded, but room for a whole-episode score
+                if self.name.startswith("openai/gpt-oss"):
+                    body["reasoning_effort"] = "low"  # hidden thinking tokens count against the free 8K/min cap
+                if "qwen" in self.name:
+                    # Qwen cannot reliably fill a schema; ask for JSON in the prompt and validate it locally.
+                    body["response_format"] = {"type": "json_object"}
+                    body["messages"] = [{"role": "system", "content": system + "\n\nReply with ONLY a JSON object matching this JSON schema "
+                                         "(no commentary):\n" + json.dumps(schema)}, messages[1]]
         digest = hashlib.sha256(canonical([f"{self.provider}:{self.name}", url, body]).encode()).hexdigest()
+        return url, body, digest
+
+    def _cached(self, stage, system, user, schema, **kwargs):
+        _, _, digest = self._request(stage, system, user, schema, **kwargs)
         path = self.cache / f"{digest}.json"
         if path.is_file():
-            record = json.loads(path.read_text(encoding="utf-8"))
             self.hits += 1
-            return record
+            return json.loads(path.read_text(encoding="utf-8"))
+        return None
+
+    def _ask(self, stage: str, system: str, user: str, schema: dict, *, temperature: float = 0.0,
+             seed: int = 7, max_tokens: int = 4000) -> dict:
+        """Return {'answer': validated JSON, 'raw': text, ...}; cached by exact request."""
+        url, body, digest = self._request(stage, system, user, schema, temperature, seed, max_tokens)
+        path = self.cache / f"{digest}.json"
+        if path.is_file():
+            self.hits += 1
+            return json.loads(path.read_text(encoding="utf-8"))
         last_problem = ""
         for attempt in range(6):
-            payload = self._post(url, body, stage)
+            try:
+                payload = self._post(url, body, stage)
+            except ModelError as exc:
+                if "json_validate_failed" in str(exc) and attempt < 5:  # the provider rejected its own malformed JSON: resample
+                    last_problem = "provider could not generate valid JSON"
+                    body = {**body, "temperature": 0.3}
+                    continue
+                raise
             try:
                 if self.local:
                     raw = payload["message"]["content"]
@@ -229,6 +290,7 @@ class Model:
         self.calls += 1
         self.tokens_in += usage[0] or 0
         self.tokens_out += usage[1] or 0
+        self._window.append((time.monotonic(), (usage[0] or 0) + (usage[1] or 0)))
         record = {"stage": stage, "model": f"{self.provider}:{self.name}", "answer": answer, "raw": raw, "tokens": list(usage),
                   "request_digest": digest}
         save_json(path, record)
@@ -238,27 +300,49 @@ class Model:
         headers = {"Content-Type": "application/json"}
         if self.key:
             headers["Authorization"] = "Bearer " + self.key
+        headers["User-Agent"] = "promo-finder/1.0"  # some provider firewalls reject Python's default agent
         data = json.dumps(body).encode()
+        cap = TOKENS_PER_MINUTE.get(self.provider)
+        need = len(data) // 3 + 1500  # rough input tokens plus room for the answer
         for attempt in range(8):
             wait = self._last + self.interval - time.monotonic()
             if wait > 0:
                 time.sleep(wait)
+            while cap:  # wait until the last 60 s plus this request fit under the per-minute cap
+                now = time.monotonic()
+                self._window = [(t, n) for t, n in self._window if now - t < 60]
+                used = sum(n for _, n in self._window)
+                if used + need <= cap * 0.95 or not self._window:
+                    break
+                time.sleep(max(1.0, 61 - (now - self._window[0][0])))
             self._last = time.monotonic()
             try:
-                with request.urlopen(request.Request(url, data, headers), timeout=240) as response:
+                with request.urlopen(request.Request(url, data, headers), timeout=900 if self.local else 60) as response:  # a local model is slow, not overloaded
                     return json.load(response)
             except error.HTTPError as exc:
                 detail = exc.read().decode("utf-8", "replace")[:300]
+                if exc.code == 429 and re.search(r"per day|\bTPD\b|\bRPD\b|daily", detail, re.I):
+                    raise ModelError(f"{stage}: {self.label} returned HTTP 429: daily limit reached ({detail[:160]}). "
+                                     "Cached answers are kept; run the same command after the limit resets.") from exc
                 limit = 2 if exc.code in (500, 502, 503, 504) else 6  # overloaded: let the chain move on
                 if exc.code in (408, 409, 429, 500, 502, 503, 504) and attempt < limit:
                     retry = exc.headers.get("retry-after")
                     pause = float(retry) if retry and retry.replace(".", "").isdigit() else min(90, 4 * 2 ** attempt)
+                    if pause > 180:
+                        raise ModelError(f"{stage}: {self.label} asked to wait {pause:.0f} s; stopping instead of sleeping. "
+                                         "Cached answers are kept; run the same command later.") from exc
                     time.sleep(pause + random.random())
                     continue
                 raise ModelError(f"{stage}: {self.label} returned HTTP {exc.code}: {detail}") from exc
+            except (TimeoutError, socket.timeout) as exc:
+                # A slow model is an overloaded model: let the chain move on instead of waiting again.
+                raise ModelError(f"{stage}: could not reach {self.label} (timed out)") from exc
             except (OSError, ValueError) as exc:
-                if attempt < 1:
-                    time.sleep(3)
+                reason = getattr(exc, "reason", exc)
+                if isinstance(reason, (TimeoutError, socket.timeout)):
+                    raise ModelError(f"{stage}: could not reach {self.label} (timed out)") from exc
+                if attempt < 5:  # ride out DNS blips and short network drops (about a minute in total)
+                    time.sleep(min(30, 5 * 2 ** attempt))
                     continue
                 raise ModelError(f"{stage}: could not reach {self.label} ({type(exc).__name__}: {exc})") from exc
         raise ModelError(f"{stage}: {self.label} kept rate-limiting; cached answers are kept, re-run to resume")

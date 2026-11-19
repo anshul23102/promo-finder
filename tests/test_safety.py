@@ -39,5 +39,31 @@ class SafetyTest(unittest.TestCase):
         self.assertNotIn("GEMINI_API_KEY", os.environ)
 
 
+class EndpointTest(unittest.TestCase):
+    def test_visitor_endpoints_must_be_public_https(self):
+        from promo.llm import public_https
+        for bad in ("http://example.com/v1", "https://127.0.0.1/v1", "https://169.254.169.254/latest",
+                    "https://10.0.0.5/v1", "https://localhost:8000/v1", "file:///etc/passwd"):
+            with self.assertRaises(ValueError, msg=bad):
+                public_https(bad)
+        with tempfile.TemporaryDirectory() as tmp, self.assertRaises(ValueError):
+            Model("openai-compatible:any", Path(tmp), key="k", base_url="https://192.168.1.10/v1")
+
+
 if __name__ == "__main__":
     unittest.main()
+
+
+class RateLimitTest(unittest.TestCase):
+    def test_daily_cap_stops_instead_of_sleeping(self):
+        import io
+        from urllib import error, request
+        from unittest import mock
+        body = io.BytesIO(b'{"error":{"message":"Rate limit reached for model on tokens per day (TPD): Limit 200000"}}')
+        http = error.HTTPError("u", 429, "Too Many Requests", {"retry-after": "7200"}, body)
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(request, "urlopen", side_effect=http), \
+                mock.patch("time.sleep") as slept:
+            m = Model("groq:openai/gpt-oss-120b", Path(tmp), key="k")
+            with self.assertRaisesRegex(Exception, "daily limit reached"):
+                m.ask("t", "s", "u", {"type": "object", "properties": {"a": {"type": "string"}}, "required": ["a"], "additionalProperties": False})
+            self.assertFalse(any(c.args and c.args[0] > 60 for c in slept.call_args_list))  # never slept for hours

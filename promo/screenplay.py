@@ -216,14 +216,17 @@ def _signals(cue: Cue) -> tuple[float, float]:
     return hook, close
 
 
-def next_beat(episode: Episode, end: int) -> Cue | None:
-    """First new dialogue, action or meaningful visual beat at/after the cut."""
+def story_beats_after(episode: Episode, end: int):
+    """In order, dialogue and action plus cameras that describe a narrative beat."""
     for cue in sorted(episode.cues, key=lambda c: (c.start, {"dialogue": 0, "action": 1}.get(c.kind, 2), c.id)):
         if cue.start < end or cue.kind == "sound":
             continue
         if cue.kind != "camera" or _VISUAL.search(cue.text) or _ANTICIPATION.search(cue.text):
-            return cue
-    return None
+            yield cue
+
+
+def next_beat(episode: Episode, end: int) -> Cue | None:
+    return next(story_beats_after(episode, end), None)
 
 
 def propose(episode: Episode, limit: int = 5) -> list[Window]:

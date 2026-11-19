@@ -66,7 +66,8 @@ def order(entries: list[dict], last_episode: int, post_first: int = 10) -> list[
 
 
 def reason(e: dict) -> str:
-    bits = [f"cold-viewer appeal {e['appeal']:.2f}"]
+    basis = "cold-viewer appeal" if e.get("view") else "screenplay heuristic"
+    bits = [f"{basis} {e['appeal']:.2f}"]
     if e["cut"].first_episode <= 5:
         bits.append(f"opens in episode {e['cut'].first_episode}, so a new viewer reaches the payoff fast")
     if (e.get("view") or {}).get("makes_sense") == "mostly":

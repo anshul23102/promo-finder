@@ -94,7 +94,8 @@ def editor(model: Model, ep: Episode, notes: dict, feedback: list[str] | None = 
 # ---------------------------------------------------------------- 3. cold viewer
 VIEWER_SYSTEM = """You are scrolling TikTok and have NEVER seen this show. Below is the complete text of one short clip:
 every camera shot, action and spoken line, with seconds from the start of the clip. You know nothing else.
-Answer honestly from the clip alone. Do not guess at backstory that is not shown.
+Answer from the clip alone. A speaker saying "I" or "my" refers to that speaker. Track who did or said each important thing before summarizing. Use speaker labels where identity is uncertain. Avoid guessing relationships from a glance, proximity or a name.
+Separate deliberate suspense from missing context. If a stranger knows who wants what and why it matters, an unexplained event can still be clear. Only assess comprehension of the events inside the cut.
 Be a tough viewer. Most clips do NOT stop your thumb: you scroll past anything that opens on a quiet look, a name you do not
 know, a line that needs earlier context, or talk without a concrete shock. Say "stop" only if the first 3 seconds contain a
 specific physical act, reveal, threat or cruel line you can understand with no context; otherwise "maybe" or "scroll_past".
@@ -128,8 +129,9 @@ def clip_text(cut: Cut, episodes: dict[int, Episode], names: dict) -> str:
     return "\n".join(parts)
 
 
-def viewer(model: Model, cut: Cut, episodes, names) -> dict:
-    return model.ask("viewer", VIEWER_SYSTEM, clip_text(cut, episodes, names), VIEWER_SCHEMA, max_tokens=800)
+def viewer(model: Model, cut: Cut, episodes) -> dict:
+    # Full-show aliases can reveal information that was hidden inside this clip.
+    return model.ask("viewer", VIEWER_SYSTEM, clip_text(cut, episodes, {}), VIEWER_SCHEMA, max_tokens=800)
 
 
 def passes(view: dict) -> tuple[bool, str]:
@@ -149,7 +151,7 @@ tap through to watch the next episode. Judge only what is in each clip. Clip len
 Return every clip letter exactly once, best first, and one short reason for your top pick."""
 
 
-def rank(model: Model, cuts: list[Cut], episodes, names, rounds: int = 4, group: int = 5, seed: int = 11) -> dict:
+def rank(model: Model, cuts: list[Cut], episodes, rounds: int = 4, group: int = 5, seed: int = 11, *, raw: list[dict] | None = None) -> dict:
     """Shuffled listwise rounds -> pairwise wins -> Bradley-Terry strengths."""
     n = len(cuts)
     if n < 2:
@@ -159,7 +161,7 @@ def rank(model: Model, cuts: list[Cut], episodes, names, rounds: int = 4, group:
     seen_pairs = defaultdict(list)
     slot_ranks = defaultdict(list)
     log = []
-    texts = [clip_text(c, episodes, names) for c in cuts]
+    texts = [clip_text(c, episodes, {}) for c in cuts]
     for r in range(rounds):
         order = list(range(n))
         rng.shuffle(order)
@@ -173,8 +175,13 @@ def rank(model: Model, cuts: list[Cut], episodes, names, rounds: int = 4, group:
             user = "\n\n".join(f"CLIP {letter}\n{texts[m]}" for letter, m in zip(letters, members))
             schema = obj(order=array(string(*letters)), reason=string())
             record = model.ask(f"rank-r{r}", RANK_SYSTEM, user, schema, max_tokens=600)
-            got = [x for x in dict.fromkeys(record["answer"]["order"]) if x in letters]
-            got += [x for x in letters if x not in got]  # tolerate a missing letter: last place
+            if raw is not None:
+                raw.append(record)
+            got = record["answer"]["order"]
+            if len(got) != len(letters) or set(got) != set(letters):
+                log.append({"round": r, "members": [cuts[m].key for m in members],
+                            "order": got, "model": record["model"], "excluded": "incomplete ballot"})
+                continue
             ranked = [members[letters.index(x)] for x in got]
             for place, m in enumerate(ranked):
                 slot_ranks[members.index(m)].append(place / (len(members) - 1))
@@ -188,7 +195,7 @@ def rank(model: Model, cuts: list[Cut], episodes, names, rounds: int = 4, group:
     repeated = [v for v in seen_pairs.values() if len(v) > 1]
     agreement = (sum(max(v.count(x) for x in set(v)) / len(v) for v in repeated) / len(repeated)) if repeated else None
     bias = {slot: round(sum(v) / len(v), 3) for slot, v in sorted(slot_ranks.items())}
-    return {"strength": strength, "comparisons": len(log), "rounds": log,
+    return {"strength": strength, "comparisons": sum("excluded" not in ballot for ballot in log), "rounds": log,
             "position_bias": bias, "agreement": agreement}
 
 

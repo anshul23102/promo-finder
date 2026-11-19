@@ -11,11 +11,14 @@ from __future__ import annotations
 import argparse
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 import sys
+from tempfile import TemporaryDirectory
 import time
 
-from . import ai, plan
+from . import ai, beats, plan
+from .evaluate import AI_SOURCES
 from .cuts import Cut, build, join, overlap
 from .evaluate import evaluate
 from .export import write_all
@@ -35,8 +38,20 @@ def arguments(argv=None):
     p.add_argument("--rank-top", type=int, default=40, help="How many passing clips enter the ranking tournament")
     p.add_argument("--rounds", type=int, default=4, help="Shuffled ranking rounds")
     p.add_argument("--no-rules-check", action="store_true", help="Skip the rules-vs-AI ablation (saves calls)")
-    p.add_argument("--no-joins", action="store_true", help="Skip cross-episode joined promos")
+    p.add_argument("--finder", choices=["beats", "editor"], default="beats",
+                   help="beats (default): score every line as an opening/ending and let code search all legal pairs; "
+                        "editor: the model proposes whole promos (v3)")
+    p.add_argument("--recover", action=argparse.BooleanOptionalAction, default=True,
+                   help="Try unseen alternate cuts for uncovered episodes (default on)")
+    p.add_argument("--no-guide", action="store_true", help="Skip the whole-show read (needed when the provider caps a request below ~50k tokens, e.g. Groq free)")
+    p.add_argument("--joins", action="store_true", help="Also try cross-episode joined promos (off: 0 survived in testing)")
     p.add_argument("--title", help="Show name for the report")
+    p.add_argument("--review", action="append", default=[], metavar="CSV|KIND|NAME",
+                   help="A reviewer's exported ratings, e.g. 'me.csv|human|The applicant'. Repeat for more reviewers; KIND is human or ai")
+    p.add_argument("--reviewer-name", help="Who made the --decisions ratings (default: the applicant)")
+    p.add_argument("--reviewer-kind", choices=["human", "ai"], default="human",
+                   help="Say 'ai' when the decisions came from a model, so the report never calls them a human review")
+    p.add_argument("--decisions", type=Path, help="CSV exported from the review page (keep / trim / pass) to score against a person")
     return p.parse_args(argv)
 
 
@@ -109,15 +124,29 @@ def spoiler_level(said: str, episode: int, notes: dict) -> str:
     return said
 
 
-def rules_cuts(ep):
+def rules_cuts(ep, limit=1, source="rules"):
     """The no-AI baseline: lexical hook and cliffhanger signals (kept for the ablation)."""
     out = []
-    for w in propose(ep, limit=1):
-        cut, _ = build(ep, w.hook, w.closing, "rules")
+    for w in propose(ep, limit=limit):
+        cut, _ = build(ep, w.hook, w.closing, source, preserve_ending=source == "recovery")
         if cut:
             out.append({"cut": cut, "hook_type": "shocking_line", "hook": w.hook.text, "spoiler": "none",
-                        "open_question": w.closing.text, "why": "Rules: strongest lexical hook and open ending."})
+                        "open_question": w.closing.text, "why": "Rules: top-scoring opening and closing cues.",
+                        "rules_score": w.score})
     return out
+
+
+def recovery_cuts(ep, tried, limit=5):
+    """Try unseen windows with a preference for different openings."""
+    candidates = []
+    for entry in rules_cuts(ep, limit=24, source="recovery"):
+        cut = entry["cut"]
+        if cut.key in tried or any(cut.hook_ref == row["cut"].hook_ref for row in candidates):
+            continue
+        candidates.append(entry)
+        if len(candidates) == limit:
+            break
+    return candidates
 
 
 def main(argv=None, *, key=None, base_url=None, log_fn=None):
@@ -126,10 +155,15 @@ def main(argv=None, *, key=None, base_url=None, log_fn=None):
     args = arguments(argv)
     load_dotenv()
     started = time.monotonic()
-    episodes = pick(load_episodes(args.input), args.episodes)
+    all_episodes = load_episodes(args.input)
+    episodes = pick(all_episodes, args.episodes)
+    if not episodes:
+        raise ValueError("The episode selection matches no input files.")
     by_number = {e.number: e for e in episodes}
-    last = max(e.number for e in load_episodes(args.input))
+    last = max(e.number for e in all_episodes)
     out = args.out or Path("private/runs") / datetime.now().strftime("%Y%m%d-%H%M%S")
+    if out.exists() and (not out.is_dir() or any(out.iterdir())):
+        raise ValueError(f"Output path already contains a run: {out}. Choose a new folder.")
     log(f"Read {len(episodes)} episodes, {sum(len(e.cues) for e in episodes)} timed cues.")
 
     rules_only = args.model == "rules"
@@ -140,44 +174,80 @@ def main(argv=None, *, key=None, base_url=None, log_fn=None):
     editor_model = None if rules_only else make(args.model)
     judge = None if rules_only else (make(args.judge) if args.judge else editor_model)
     raw: list[dict] = []
+    warnings: list[str] = []
+
+    def warn(message: str) -> None:
+        warnings.append(message)
+        log(message)
 
     # 1. guide -------------------------------------------------------------------------------
-    if editor_model and not editor_model.local:
+    notes = ai.fallback_guide(episodes)
+    if editor_model and not editor_model.local and not args.no_guide:
         log(f"Reading the whole show once with {editor_model.label} ...")
-        notes = ai.guide(editor_model, episodes)
-        raw.append(notes.pop("_record"))
-    else:
-        notes = ai.fallback_guide(episodes)
+        try:
+            notes = ai.guide(editor_model, episodes)
+            raw.append(notes.pop("_record"))
+        except ModelError as exc:
+            warn(f"Show guide unavailable ({str(exc)[:140]}). Using source labels without inferred spoilers.")
     names = notes.get("names", {})
 
     # 2. candidates --------------------------------------------------------------------------
     entries, rejected = [], []
+    finder_available = bool(editor_model)
     for ep in episodes:
         mine = []
-        if editor_model:
-            found, failed = editor_cuts(editor_model, ep, notes, raw)
-            mine += found
-            rejected += failed
-        if rules_only or not args.no_rules_check:
+        try:
+            if finder_available and args.finder == "beats":
+                record = beats.score_beats(editor_model, ep, names)
+                raw.append(record)
+                found, stats = beats.search(ep, record["answer"]["beats"], notes=notes)
+                if not found:
+                    rejected.append({"episode": ep.number, "why_rejected": "no legal hook x cliffhanger pair", **stats})
+                mine += found
+            elif finder_available:
+                found, failed = editor_cuts(editor_model, ep, notes, raw)
+                mine += found
+                rejected += failed
+        except ModelError as exc:
+            finder_available = False
+            warn(f"AI finder stopped at episode {ep.number:02d} ({str(exc)[:140]}). Remaining episodes use timing-based discovery.")
+        if not finder_available or not args.no_rules_check:
             for r in rules_cuts(ep):  # skip a rules clip that duplicates an editor clip
                 if not any(overlap(r["cut"], m["cut"]) > 0.6 for m in mine):
                     mine.append(r)
         entries += mine
-        log(f"  episode {ep.number:02d}: {sum(m['cut'].source == 'editor' for m in mine)} editor picks")
+        log(f"  episode {ep.number:02d}: {sum(m['cut'].source in AI_SOURCES for m in mine)} AI picks")
     for i, e in enumerate(entries, 1):
         e["id"] = f"P{i:03d}"
 
     # 3. cold viewer -------------------------------------------------------------------------
+    judge_available = bool(judge)
+
     def view(pool):
+        nonlocal judge_available
         kept = []
         for e in pool:
             if judge is None:
                 e.update(view=None, passed=True, why_rejected=None)
                 kept.append(e)
                 continue
-            record = ai.viewer(judge, e["cut"], by_number, names)
+            if judge_available:
+                try:
+                    record = ai.viewer(judge, e["cut"], by_number)
+                except ModelError as exc:
+                    judge_available = False
+                    warn(f"Cold viewer unavailable ({str(exc)[:140]}). Remaining candidates require editor review.")
+            if not judge_available:
+                e.update(view=None, passed=False, why_rejected="viewer unavailable")
+                rejected.append(e)
+                continue
             raw.append(record)
             ok, why = ai.passes(record["answer"])
+            if ok and e["cut"].source == "recovery":
+                verdict = record["answer"]
+                if (verdict["first_3s"], verdict["makes_sense"], verdict["ending"]) != ("stop", "yes", "unresolved"):
+                    ok, why = False, "alternate needs editor review: opening, clarity or suspense was borderline"
+
             e.update(view=record["answer"], passed=ok, why_rejected=None if ok else why)
             (kept if ok else rejected).append(e)
         return kept
@@ -186,23 +256,48 @@ def main(argv=None, *, key=None, base_url=None, log_fn=None):
         log(f"Cold viewer ({judge.label}) is watching {len(entries)} clips with no context ...")
     passing = view(entries)
 
+    if judge_available and args.recover:
+        covered = {entry["cut"].first_episode for entry in passing}
+        tried = {entry["cut"].key for entry in entries}
+        for ep in episodes:
+            if ep.number in covered:
+                continue
+            candidates = recovery_cuts(ep, tried)
+            log(f"  episode {ep.number:02d}: checking {len(candidates)} alternate cuts")
+            for alternate in candidates:
+                alternate["id"] = f"P{len(entries) + 1:03d}"
+                accepted = view([alternate])
+                entries.append(alternate)
+                if accepted:
+                    passing.extend(accepted)
+                    break
+                if not judge_available:
+                    break
+            if not judge_available:
+                break
+
     # 4. joined promos -----------------------------------------------------------------------
-    if editor_model and not editor_model.local and not args.no_joins:
+    if finder_available and judge_available and not editor_model.local and args.joins:
         firsts, seen = [], set()
         for e in passing:
-            if e["cut"].source == "editor" and len(e["cut"].segments) == 1 and e["cut"].first_episode not in seen:
+            if e["cut"].source in AI_SOURCES and len(e["cut"].segments) == 1 and e["cut"].first_episode not in seen:
                 seen.add(e["cut"].first_episode)
                 firsts.append(e["cut"])
         if len(firsts) >= 2:
             log(f"Looking for stronger promos that join moments across episodes ({len(firsts)} candidates) ...")
-            record = ai.joins(editor_model, firsts[:50], by_number, notes)
-            raw.append(record)
+            joined = []
+            try:
+                record = ai.joins(editor_model, firsts[:50], by_number, notes)
+                raw.append(record)
+                joined = record["answer"]["joins"][:4]
+            except ModelError as exc:
+                warn(f"Join suggestions unavailable ({str(exc)[:140]}). Exporting the continuous cuts.")
             new = []
-            for j in record["answer"]["joins"][:4]:
+            for j in joined:
                 parts = []
                 for m in j["moments"][:3]:
-                    ep_no = int(m["first_cue"].strip().upper().lstrip("E").split("-")[0]) if "-" in m["first_cue"] else -1
-                    ep = by_number.get(ep_no)
+                    ep_no, separator, _ = m["first_cue"].strip().upper().lstrip("E").partition("-")
+                    ep = by_number.get(int(ep_no)) if separator and ep_no.isdecimal() else None
                     a, b = (resolve(ep, m["first_cue"]), resolve(ep, m["last_cue"])) if ep else (None, None)
                     parts.append((ep, a, b))
                 meta = {"hook_type": "reveal", "hook": j["hook"], "open_question": j["open_question"],
@@ -223,17 +318,28 @@ def main(argv=None, *, key=None, base_url=None, log_fn=None):
              "unresolved": 2, "softened": 1, "resolved": 0}
     for e in passing:
         v = e.get("view")
-        e["pre"] = sum(grade[v[k]] for k in ("first_3s", "makes_sense", "ending")) if v else e["cut"].length
+        e["pre"] = sum(grade[v[k]] for k in ("first_3s", "makes_sense", "ending")) if v else e.get("rules_score", 1.0)
     pool = sorted(passing, key=lambda e: (-e["pre"], e["cut"].first_episode))[: args.rank_top]
-    if judge and len(pool) > 1:
+    ranking = None
+    ranking_note = None
+    if judge_available and args.rounds > 0 and len(pool) > 1:
         log(f"Ranking {len(pool)} clips in {args.rounds} shuffled rounds ...")
-        ranking = ai.rank(judge, [e["cut"] for e in pool], by_number, names, rounds=args.rounds)
-        for e, s in zip(pool, ranking["strength"]):
-            e["strength"] = s
+        try:
+            ranking = ai.rank(judge, [e["cut"] for e in pool], by_number, rounds=args.rounds, raw=raw)
+        except ModelError as exc:
+            ranking_note = f"Tournament model unavailable ({str(exc)[:140]}). Posting order uses the viewer rubric."
+            warn(ranking_note)
+    if ranking and ranking["comparisons"]:
+        for entry, strength in zip(pool, ranking["strength"]):
+            entry["strength"] = strength
     else:
-        ranking = {"strength": [], "comparisons": 0, "rounds": []}
-        for e in pool:
-            e["strength"] = max(0.01, e["pre"])
+        if ranking:
+            ranking_note = "Tournament returned no complete ballots. Posting order uses the viewer rubric."
+        ranking = ranking or {"strength": [], "comparisons": 0, "rounds": []}
+        if ranking_note:
+            ranking["note"] = ranking_note
+        for entry in pool:
+            entry["strength"] = max(0.01, entry["pre"])
     for e in passing:
         if e not in pool:
             e["strength"] = min((x["strength"] for x in pool), default=1.0) * 0.5
@@ -243,13 +349,26 @@ def main(argv=None, *, key=None, base_url=None, log_fn=None):
     usage = [m.usage() for m in {id(m): m for m in (editor_model, judge) if m}.values()]
     summary = {"show": args.title or args.input.stem, "episodes": len(episodes),
                "cues": sum(len(e.cues) for e in episodes), "editor_model": editor_model.label if editor_model else "rules",
-               "judge_model": judge.label if judge else "none", "candidates": len(entries), "passed": len(passing),
+               "judge_model": judge.label if judge else "none", "finder": args.finder if editor_model else "rules", "candidates": len(entries), "passed": len(passing),
                "post_first": sum(e["plan"] == "post_first" for e in ordered), "usage": usage,
                "seconds": round(time.monotonic() - started, 1)}
     references = json.loads(args.references.read_text()) if args.references else None
-    write_all(out, summary, notes, ordered, entries, rejected, ranking, raw, by_number, references, evaluate)
-    log(f"\nDone in {summary['seconds']} s. {len(passing)} promos passed, "
-        f"{summary['post_first']} marked post-first.\nOpen {(out / 'index.html').resolve()}")
+    summary["decisions_file"] = str(args.decisions) if args.decisions else None
+    summary["reviewer_name"], summary["reviewer_kind"] = args.reviewer_name, args.reviewer_kind
+    summary["reviews"] = []
+    for spec in ([f"{args.decisions}|{args.reviewer_kind}|{args.reviewer_name or 'the applicant'}"] if args.decisions else []) + args.review:
+        path, kind, name = (spec.split("|") + ["human", "reviewer"])[:3]
+        if kind not in ("human", "ai"):
+            raise ValueError(f"--review kind must be human or ai, got {kind!r}")
+        summary["reviews"].append({"path": path, "kind": kind, "name": name})
+    summary["warnings"] = warnings
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(dir=out.parent, prefix=".promo-") as temporary:
+        staging = Path(temporary) / "run"
+        write_all(staging, summary, notes, ordered, entries, rejected, ranking, raw, by_number, references, evaluate, all_episodes)
+        os.rename(staging, out)
+    outcome = "viewer-shortlisted cuts" if judge else "timing-checked review candidates"
+    log(f"\nDone in {summary['seconds']} s. {len(passing)} {outcome}.\nOpen {(out / 'index.html').resolve()}")
     return out
 
 

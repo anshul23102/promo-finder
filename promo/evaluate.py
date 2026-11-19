@@ -16,6 +16,9 @@ import re
 from .cuts import HOOK_WINDOW, MAX_LEN, MIN_LEN, MIN_SEGMENT, Segment, opens_mid_sentence, overlap
 from .screenplay import Episode, clean_edges, stamp
 
+AI_SOURCES = ("editor", "beats")  # the AI finders (v3 whole-promo editor, v4 beat scorer)
+
+
 def writer_cliffhangers(episodes: list[Episode]) -> list[dict]:
     """Episodes whose NEXT episode's continuity note says "Episode N's cliffhanger/climax".
 
@@ -39,8 +42,13 @@ def writer_cliffhangers(episodes: list[Episode]) -> list[dict]:
 def check_rules(promos: list[dict], episodes: dict[int, Episode]) -> list[str]:
     """Return every violation; an empty list means all promos obey the brief."""
     problems = []
+    edges_by_episode = {number: clean_edges(ep) for number, ep in episodes.items()}
     for p in promos:
         segs = [Segment(s["episode"], s["start_cs"], s["end_cs"]) for s in p["segments"]]
+        if not 1 <= len(segs) <= 3:
+            problems.append(f"{p['id']}: expected 1–3 segments")
+            if not segs:
+                continue
         total = sum(s.length for s in segs)
         if not MIN_LEN <= total <= MAX_LEN:
             problems.append(f"{p['id']}: length {total / 100}s")
@@ -53,24 +61,32 @@ def check_rules(promos: list[dict], episodes: dict[int, Episode]) -> list[str]:
                 problems.append(f"{p['id']}: segment {i + 1} shorter than 5 s")
             if opens_mid_sentence(ep, s.start):
                 problems.append(f"{p['id']}: segment {i + 1} opens on a dangling line")
-            edges = clean_edges(ep)
+            edges = edges_by_episode[s.episode]
             if s.start not in edges or s.end not in edges:
                 problems.append(f"{p['id']}: segment {i + 1} cuts through a spoken line")
         if [(s.episode, s.start) for s in segs] != sorted((s.episode, s.start) for s in segs):
             problems.append(f"{p['id']}: segments out of story order")
+        if any(a.episode == b.episode and a.end > b.start for a, b in zip(segs, segs[1:])):
+            problems.append(f"{p['id']}: segments overlap")
         hook_ep, hook_id = p["hook_cue"]
-        hook = next((c for c in episodes[hook_ep].cues if c.id == hook_id), None)
-        if hook is None or not segs[0].start <= hook.start <= segs[0].start + HOOK_WINDOW:
+        first = segs[0]
+        source = episodes.get(hook_ep)
+        hook = next((c for c in source.cues if c.id == hook_id), None) if source else None
+        if (hook is None or hook_ep != first.episode or hook.kind == "sound"
+                or not first.start <= hook.start <= first.start + HOOK_WINDOW or hook.end > first.end):
             problems.append(f"{p['id']}: hook does not land in the first 3 seconds")
     return problems
 
 
 def evaluate(entries: list[dict], rejected: list[dict], episodes: list[Episode], references: dict | None,
-             ranking: dict, promos: list[dict]) -> dict:
+             ranking: dict, promos: list[dict], all_episodes: list[Episode] | None = None) -> dict:
     by_number = {e.number: e for e in episodes}
-    editor_cuts = [e for e in entries if e["cut"].source == "editor"]
+    editor_cuts = [e for e in entries if e["cut"].source in AI_SOURCES]
 
-    labels = writer_cliffhangers(episodes)
+    # A label for episode N comes from episode N+1's continuity note, so build labels from the WHOLE pack and keep
+    # those for episodes in this run; otherwise a subset run silently loses most labels.
+    ran = {e.number for e in episodes}
+    labels = [l for l in writer_cliffhangers(all_episodes or episodes) if l["episode"] in ran]
     hits = []
     for label in labels:
         ends = [e["cut"].segments[-1].end for e in editor_cuts if e["cut"].segments[-1].episode == label["episode"]]
@@ -87,19 +103,20 @@ def evaluate(entries: list[dict], rejected: list[dict], episodes: list[Episode],
         from .cuts import Cut
         ref_cut = Cut([Segment(item["episode"], round(ref["start_s"] * 100), round(ref["end_s"] * 100))], "", "", "reference")
 
-        def best(source):
-            mine = [e for e in entries if e["cut"].first_episode == item["episode"] and (source is None or e["cut"].source == source)
-                    and e.get("passed", True)]
+        def best(source, judged=True):
+            mine = [e for e in entries if e["cut"].first_episode == item["episode"] and (source is None or e["cut"].source in source)
+                    and (e.get("passed", True) or not judged)]
             return round(max((overlap(e["cut"], ref_cut) for e in mine), default=0.0), 3)
 
         refs.append({"episode": item["episode"], "reference": [ref["start_time"], ref["end_time"]],
-                     "best_iou_ai_editor": best("editor"), "best_iou_rules": best("rules"), "best_iou_any": best(None)})
+                     "best_iou_ai_editor": best(AI_SOURCES), "best_iou_rules": best(("rules",)), "best_iou_any": best(None),
+                     "best_iou_ai_before_judge": best(AI_SOURCES, judged=False)})
 
     def mean(key):
         return round(sum(r[key] for r in refs) / len(refs), 3) if refs else None
 
     def rate(source):
-        pool = [e for e in entries if e["cut"].source == source and e.get("view")]
+        pool = [e for e in entries if e["cut"].source in source and e.get("view")]
         ok = [e for e in pool if e["passed"]]
         return {"viewed": len(pool), "passed": len(ok), "pass_rate": round(len(ok) / len(pool), 3) if pool else None}
 
@@ -109,9 +126,61 @@ def evaluate(entries: list[dict], rejected: list[dict], episodes: list[Episode],
         "writer_cliffhangers": {"labels": len(hits), "hit_last_10s": sum(h["hit"] for h in hits), "detail": hits},
         "reference_cuts": {"episodes": len(refs), "mean_best_iou_ai_editor": mean("best_iou_ai_editor"),
                            "mean_best_iou_rules": mean("best_iou_rules"), "mean_best_iou_any": mean("best_iou_any"),
+                           "mean_best_iou_ai_before_judge": mean("best_iou_ai_before_judge"),
                            "hits_iou_0_5_any": sum(r["best_iou_any"] >= 0.5 for r in refs), "detail": refs},
-        "ablation_cold_viewer_pass": {"ai_editor": rate("editor"), "rules": rate("rules"), "joined": rate("joined")},
+        "ablation_cold_viewer_pass": {"ai_editor": rate(AI_SOURCES), "rules": rate(("rules",)), "joined": rate(("joined",))},
+        "coverage": {"episodes_with_a_promo": len({s.episode for e in entries if e.get("passed") for s in e["cut"].segments}),
+                     "episodes": len(episodes)},
         "rejections": dict(reasons.most_common()),
         "judge": {"comparisons": ranking.get("comparisons"), "repeat_pair_agreement": ranking.get("agreement"),
-                  "average_place_by_slot": ranking.get("position_bias")},
+                  "average_place_by_slot": ranking.get("position_bias"), "note": ranking.get("note")},
     }
+
+
+def human_review(path, promos: list[dict], reviewer: str | None = None, kind: str | None = None) -> dict | None:
+    """Read the review page's exported CSV (keep / trim / pass) and score the tool against a person."""
+    import csv
+    if not path:
+        return None
+    # must match promo/report.py, which joins "Ep N [in – out]" cells with " | "
+    by_segments = {" | ".join(f"Ep {s['episode']} [{s['start']} – {s['end']}]" for s in p["segments"]): p for p in promos}
+    by_id = {}
+    with open(path, encoding="utf-8-sig", newline="") as handle:
+        for row in csv.DictReader(handle):
+            promo = by_segments.get(row.get("segments_in_order", "").strip())
+            if promo and row.get("decision") in ("keep", "trim", "pass"):
+                by_id[row["segments_in_order"].strip()] = (promo, row["decision"])
+    judged = list(by_id.values())
+    def share(items):
+        n = len(items)
+        return {"n": n, **{d: sum(x == d for _, x in items) for d in ("keep", "trim", "pass")},
+                "keep_or_trim_rate": round(sum(x != "pass" for _, x in items) / n, 3) if n else None}
+    kind = kind or "human"
+    ranks = {d: [j[0]["rank"] for j in judged if j[1] == d and "rank" in j[0]] for d in ("keep", "trim", "pass")}
+    return {"reviewer": reviewer or "the applicant (one person, one show)", "kind": kind, "all": share(judged),
+            "decisions": {key: decision for key, (_, decision) in by_id.items()},
+            "mean_queue_rank": {d: round(sum(v) / len(v), 1) for d, v in ranks.items() if v},
+            "post_first": share([j for j in judged if j[0]["plan"] == "post_first"]),
+            "by_finder": {src: share([j for j in judged if j[0]["source"] == src]) for src in sorted({j[0]["source"] for j in judged})}}
+
+
+def review_agreement(a: dict | None, b: dict | None) -> dict | None:
+    """How much two reviewers agree on the cuts both rated: exact, post-vs-pass, and Cohen's kappa for each."""
+    if not a or not b:
+        return None
+    keys = sorted(set(a["decisions"]) & set(b["decisions"]))
+    if not keys:
+        return None
+
+    def kappa(x, y):
+        n = len(x)
+        po = sum(i == j for i, j in zip(x, y)) / n
+        labels = set(x) | set(y)
+        pe = sum((x.count(l) / n) * (y.count(l) / n) for l in labels)
+        return None if pe == 1 else round((po - pe) / (1 - pe), 2)
+
+    x3, y3 = [a["decisions"][k] for k in keys], [b["decisions"][k] for k in keys]
+    x2, y2 = [d != "pass" for d in x3], [d != "pass" for d in y3]
+    return {"a": a["reviewer"], "b": b["reviewer"], "cuts": len(keys),
+            "identical": sum(i == j for i, j in zip(x3, y3)), "post_vs_pass_agree": sum(i == j for i, j in zip(x2, y2)),
+            "kappa_three_way": kappa(x3, y3), "kappa_post_vs_pass": kappa(x2, y2)}

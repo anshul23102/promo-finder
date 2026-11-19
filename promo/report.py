@@ -100,6 +100,28 @@ def _cut(index, promo):
     </article>"""
 
 
+def _coverage(items):
+    if not items:
+        return ""
+    rows = []
+    for item in items:
+        cut = item.get("cut")
+        segments = " / ".join(f"{part['start']}–{part['end']}" for part in (cut or {}).get("segments", []))
+        evidence = ""
+        if cut:
+            fields = (("Opening", "opening"), ("Ending", "ending"), ("Following beat", "next_beat"))
+            evidence = "<details><summary>Script evidence</summary>" + "".join(
+                f"<p><strong>{label}</strong> {_text(cut[key])}</p>"
+                for label, key in fields if cut.get(key)
+            ) + "</details>"
+        rows.append(f"<tr><th scope='row'>{_text(item['episode'])}</th>"
+                    f"<td>{_text(item['status'])}</td><td>{_text(segments)}{evidence}</td>"
+                    f"<td>{_text(item['reason'])}</td></tr>")
+    return ("<details class='episode-coverage'><summary>Episode coverage</summary>"
+            "<table><thead><tr><th>Episode</th><th>Outcome</th><th>Cut</th><th>Reason</th>"
+            "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></details>")
+
+
 def render_report(result: dict) -> str:
     """Return static HTML. Browser-only annotations never mutate the raw results."""
     promos = result.get("promos") or []
@@ -142,7 +164,7 @@ def render_report(result: dict) -> str:
         <h1>{_text(show)}</h1><div class="stats"><span>{_text(episode_label)}</span>
         <span>{_text(cue_label)}</span><span>{count_label}</span></div></div>{run_details}</div>
         <noscript><p>All cuts are listed below. Enable JavaScript to save decisions and export your review.</p></noscript>
-        <p id="notice" class="notice" role="status"></p>{body}</main>
+        <p id="notice" class="notice" role="status"></p>{body}{_coverage(result.get("coverage"))}</main>
       <script>{_JS}</script></body></html>"""
 
 
@@ -168,6 +190,7 @@ button,summary {font:inherit;cursor:pointer} a {color:inherit}
 .overline {margin-bottom:4px} h1 {font-size:clamp(1.65rem,3.7vw,2.85rem);font-weight:670;line-height:1.13;letter-spacing:-.047em;overflow-wrap:anywhere}
 .stats,.cut-meta {display:flex;gap:8px 16px;flex-wrap:wrap;align-items:center;font-variant-numeric:tabular-nums}
 .stats {margin-top:10px}.stats span+span {border-left:1px solid #b8bfcd;padding-left:16px}
+.episode-coverage {margin:24px 0;overflow:auto}.episode-coverage table {width:100%;border-collapse:collapse;text-align:left}.episode-coverage th,.episode-coverage td {padding:8px;border-bottom:1px solid var(--rule);vertical-align:top}.episode-coverage td p {margin:6px 0}
 .run-details {flex:none}.run-details p {padding:6px 0} summary {font-weight:600}
 .workspace {display:grid;grid-template-columns:minmax(220px,30%) minmax(0,1fr);gap:24px;align-items:start;padding-bottom:48px}
 .queue,.cut,.empty {background:white;border:1px solid var(--rule);border-radius:9px}
