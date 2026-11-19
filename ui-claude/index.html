@@ -135,9 +135,14 @@
         <header class="page-head"><h1>Use it on a new show</h1>
           <p class="lede">Any show whose screenplay files carry timed cues works unchanged. Nothing here is specific to one story.</p></header>
 
+        <section class="card wide start">
+          <h2>Fastest way: the workbench</h2>
+          <p>Run one command, drop your episode files into the page that opens, pick an engine, and get a page like this one for your show. It all runs on your computer; your scripts are only sent anywhere if you pick an AI engine and confirm.</p>
+<pre class="code">python3 ui-claude/workbench.py</pre>
+        </section>
         <div class="cards2">
           <article class="card">
-            <h2>1. What goes in</h2>
+            <h2>What goes in</h2>
             <p>One text file per episode. Each cue is a label, a time range and the text:</p>
 <pre class="code">**MAYA (stunned):**
 Start: (00:02.29) | End: (00:05.17)
@@ -145,19 +150,19 @@ Start: (00:02.29) | End: (00:05.17)
             <p class="muted">Labels ACTION, CAMERA and SOUND FX are understood; any other label is a speaker. The episode number comes from the file name (<code>ep_3.txt</code>, <code>episode-003.txt</code>) or an <code>EPISODE NUMBER:</code> line. A logline and continuity notes help but are optional. Subtitle files (SRT, VTT) are not read yet.</p>
           </article>
           <article class="card">
-            <h2>2. Try it with no setup</h2>
+            <h2>Try it with no setup</h2>
             <p>Open the <a href="https://promo-finder-ajx17.streamlit.app" target="_blank" rel="noopener">hosted app</a>, upload a ZIP or a few episode files, and run it in rules mode. No key, no AI.</p>
             <p class="muted">Use the hosted app only with scripts you are free to share. For confidential scripts, run it on your own machine.</p>
           </article>
           <article class="card">
-            <h2>3. Run it on your machine</h2>
+            <h2>Run it from the command line</h2>
 <pre class="code">python3 -m promo path/to/scripts.zip \
   --model groq:openai/gpt-oss-120b \
   --judge groq:qwen/qwen3.8-27b --no-guide</pre>
             <p class="muted">Swap the model with one flag (<code>gemini</code>, <code>groq</code>, <code>openrouter</code>, <code>ollama</code>, any OpenAI-compatible endpoint). <code>--model rules</code> needs no AI at all. Every answer is cached, so a re-run costs nothing.</p>
           </article>
           <article class="card">
-            <h2>4. See the result here</h2>
+            <h2>View a finished run</h2>
 <pre class="code">python3 ui-claude/serve.py \
   --run private/runs/&lt;your-run&gt; \
   --pack path/to/scripts.zip</pre>

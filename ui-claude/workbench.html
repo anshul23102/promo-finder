@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0A0A14">
+<title>Promo Finder: your scripts</title>
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/app.css">
+<style>
+  body { overflow: auto; }
+  .wb { max-width: 860px; margin: 0 auto; padding: 28px 22px 90px; }
+  .wb-top { display: flex; align-items: center; gap: 12px; margin-bottom: 34px; }
+  .step { margin-top: 16px; }
+  .step h2 { display: flex; gap: 12px; align-items: center; font: 700 19px/1.2 var(--display); margin-bottom: 12px; }
+  .step h2 i { font-style: normal; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--orange); font-size: 15px; }
+  .drop { border: 2px dashed var(--line-2); border-radius: var(--radius); padding: 34px 20px; text-align: center; color: var(--text-2); transition: border-color .15s, background .15s; cursor: pointer; }
+  .drop.over, .drop:hover { border-color: var(--orange-hot); background: var(--orange-soft); color: #fff; }
+  .drop b { color: #fff; font-size: 17px; display: block; margin-bottom: 4px; }
+  .files { margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+  .files li { background: var(--ink-4); border-radius: 999px; padding: 3px 11px; font-size: 13px; font-weight: 600; }
+  .row { display: grid; gap: 10px; }
+  label.opt { display: grid; grid-template-columns: 22px 1fr; gap: 10px; padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 12px; cursor: pointer; background: var(--ink-2); }
+  label.opt:has(input:checked) { border-color: var(--orange); background: var(--orange-soft); }
+  label.opt.off { opacity: .5; cursor: not-allowed; }
+  label.opt small { display: block; color: var(--text-3); font-weight: 500; }
+  input[type=text] { width: 100%; background: var(--ink-0); border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 12px; color: #fff; font: inherit; }
+  .field { display: grid; gap: 6px; margin-top: 12px; color: var(--text-2); font-size: 14px; font-weight: 600; }
+  .warn-box { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: rgba(248,197,67,.09); border: 1px solid rgba(248,197,67,.4); color: var(--text-2); font-size: 14px; }
+  .warn-box label { display: flex; gap: 10px; align-items: flex-start; color: #fff; font-weight: 600; margin-top: 8px; cursor: pointer; }
+  .err { color: var(--pass); margin-top: 10px; font-weight: 600; }
+  .log { margin-top: 12px; background: var(--ink-0); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font: 500 12.5px/1.5 ui-monospace, 'SF Mono', Menlo, monospace; color: var(--text-2); min-height: 60px; white-space: pre-wrap; max-height: 220px; overflow: auto; }
+  .recent a { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--ink-2); color: #fff; text-decoration: none; margin-top: 8px; font-weight: 600; }
+  .recent a span { color: var(--text-3); font-weight: 500; }
+  .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--text-3); border-top-color: var(--orange-hot); border-radius: 50%; animation: sp .8s linear infinite; vertical-align: -2px; margin-right: 8px; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="logo" viewBox="0 0 40 40"><defs><clipPath id="lt"><path d="M0 0H40V18.6L0 25.4Z"/></clipPath><clipPath id="lb"><path d="M0 31.6L40 24.8V40H0Z"/></clipPath></defs><rect x="8" y="1.5" width="24" height="37" rx="7" fill="#FF641C" clip-path="url(#lt)"/><g transform="translate(2.4 1.4)"><rect x="8" y="1.5" width="24" height="37" rx="7" fill="#FF641C" opacity=".4" clip-path="url(#lb)"/></g><path d="M16.6 7.2v10.4l9-5.2z" fill="#fff"/></symbol></svg>
+<main class="wb">
+  <div class="wb-top"><svg class="mark xl" aria-hidden="true"><use href="#logo"/></svg><span class="brand-name" style="font-size:28px">Promo<b>Finder</b></span></div>
+  <h1 style="font:800 clamp(30px,5vw,46px)/1.03 var(--display);letter-spacing:-.03em;max-width:18ch">Find promos in your own scripts</h1>
+  <p class="lede">Drop the screenplay files for a show. You get the same results page as the demo: every promo with its times, hook, cliffhanger and why it works. Everything runs on this computer.</p>
+
+  <section class="step"><h2><i>1</i>Add the scripts</h2>
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose files"><b>Drop episode files here, or click to choose</b>One .txt per episode, or one .zip of them</div>
+    <input type="file" id="pick" multiple accept=".txt,.zip" hidden>
+    <ul class="files" id="files"></ul>
+    <div class="field"><label for="title">Show name</label><input type="text" id="title" placeholder="My show" maxlength="80"></div>
+  </section>
+
+  <section class="step"><h2><i>2</i>Choose how to find them</h2>
+    <div class="row" id="engines"></div>
+    <div id="aiOnly" hidden>
+      <div class="field"><label for="eps">Episodes (optional)</label><input type="text" id="eps" placeholder="all, or for example 1-12"></div>
+      <div class="warn-box" id="sendsBox"><span id="sendsText"></span><label><input type="checkbox" id="confirm"> I am allowed to send these scripts to that provider.</label></div>
+    </div>
+  </section>
+
+  <section class="step"><h2><i>3</i>Run</h2>
+    <button class="pill primary big" id="run" type="button" disabled>Find the promos</button>
+    <p class="err" id="err" role="alert"></p>
+    <div id="prog" hidden><p><span class="spin"></span><b id="phase">Starting</b></p><div class="log" id="log"></div></div>
+    <p id="doneBox" hidden><a class="pill primary big" id="open" href="#" style="display:inline-block;text-decoration:none;margin-top:12px">Open the results</a></p>
+  </section>
+
+  <section class="step recent" id="recent" hidden><h2>Earlier runs</h2><div id="recentList"></div></section>
+</main>
+<script>
+(() => {
+  const TOKEN = '__TOKEN__';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const api = (path, opt = {}) => fetch(path, { ...opt, headers: { 'X-Token': TOKEN, ...(opt.headers || {}) } }).then(async r => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'Request failed'); return j; });
+  let files = [], engines = {}, engine = 'rules';
+  const refresh = () => {
+    $('files').innerHTML = files.map(f => `<li>${esc(f.name)}</li>`).join('');
+    $('run').disabled = !files.length;
+  };
+  const add = list => {
+    const ok = [...list].filter(f => /\.(txt|zip)$/i.test(f.name));
+    if (ok.length < list.length) $('err').textContent = 'Only .txt episodes or a .zip were added; other files were skipped.'; else $('err').textContent = '';
+    files = files.concat(ok); refresh();
+  };
+  const drop = $('drop');
+  drop.addEventListener('click', () => $('pick').click());
+  drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('pick').click(); } });
+  $('pick').addEventListener('change', e => add(e.target.files));
+  ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => add(e.dataTransfer.files));
+
+  const paintEngines = () => {
+    $('engines').innerHTML = Object.entries(engines).map(([k, v]) => `<label class="opt ${v.ready ? '' : 'off'}"><input type="radio" name="eng" value="${k}" ${k === engine ? 'checked' : ''} ${v.ready ? '' : 'disabled'}><span>${esc(v.label)}<small>${v.ready ? (v.sends ? 'Sends the script text to ' + esc(v.sends.split(' (')[0]) : 'Nothing leaves this computer') : 'Needs ' + esc(v.key) + ' in the .env file'}</small></span></label>`).join('');
+    document.querySelectorAll('input[name=eng]').forEach(r => r.addEventListener('change', () => { engine = r.value; gate(); }));
+    gate();
+  };
+  const gate = () => {
+    const e = engines[engine] || {};
+    $('aiOnly').hidden = engine === 'rules';
+    $('sendsBox').hidden = !e.sends;
+    if (e.sends) $('sendsText').textContent = 'This sends the text of your scripts to ' + e.sends + '.';
+  };
+  api('/api/engines').then(j => { engines = j; paintEngines(); }).catch(e => { $('err').textContent = e.message; });
+
+  const recent = () => api('/api/jobs').then(list => {
+    $('recent').hidden = !list.length;
+    $('recentList').innerHTML = list.map(j => `<a href="/view/${j.id}/">${esc(j.title || 'My show')}<span>${new Date(j.when * 1000).toLocaleString()}</span></a>`).join('');
+  }).catch(() => {});
+  recent();
+
+  $('run').addEventListener('click', async () => {
+    $('err').textContent = ''; $('run').disabled = true;
+    try {
+      const { id } = await api('/api/new', { method: 'POST' });
+      for (const f of files) await api(`/api/upload?job=${id}&name=${encodeURIComponent(f.name)}`, { method: 'POST', body: await f.arrayBuffer() });
+      await api('/api/run', { method: 'POST', body: JSON.stringify({ job: id, engine, episodes: $('eps').value, title: $('title').value, confirm: $('confirm').checked }) });
+      $('prog').hidden = false; $('doneBox').hidden = true;
+      const poll = async () => {
+        const j = await api('/api/job?id=' + id);
+        $('phase').textContent = j.phase || (j.status === 'queued' ? 'Starting' : 'Working');
+        $('log').textContent = (j.log || []).join('\n');
+        if (j.status === 'done') { $('prog').hidden = true; $('doneBox').hidden = false; $('open').href = j.url; recent(); $('run').disabled = false; return; }
+        if (j.status === 'error') { $('prog').hidden = true; $('err').textContent = j.message; $('run').disabled = false; return; }
+        setTimeout(poll, 1500);
+      };
+      poll();
+    } catch (e) { $('err').textContent = e.message; $('run').disabled = false; }
+  });
+})();
+</script>
+</body>
+</html>

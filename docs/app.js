@@ -370,7 +370,9 @@ function wire() {
   E.exportBtn.addEventListener('click', exportCsv);
   E.helpBtn.addEventListener('click', () => E.help.showModal());
   document.addEventListener('keydown', ev => {
-    if (E.help.open || ev.metaKey || ev.ctrlKey || ev.altKey || !E.intro.classList.contains('gone') || view !== 'review') return;
+    if (E.help.open || ev.metaKey || ev.ctrlKey || ev.altKey || !E.intro.classList.contains('gone')) return;
+    if (view === 'promos') { const k0 = ev.key; if (k0 === 'ArrowRight' || k0 === 'ArrowDown') { ev.preventDefault(); stepPromo(1); } else if (k0 === 'ArrowLeft' || k0 === 'ArrowUp') { ev.preventDefault(); stepPromo(-1); } return; }
+    if (view !== 'review') return;
     if (ev.target.closest && ev.target.closest('.tl-handle') && (ev.key === 'ArrowUp' || ev.key === 'ArrowDown')) return;
     const k = ev.key.toLowerCase();
     if (k === ' ' ) { ev.preventDefault(); P.playing ? stop() : start(); }
@@ -404,46 +406,78 @@ const pulseSvg = ep => {
   return `<svg class="pulse" viewBox="0 0 48 28" aria-hidden="true"><line x1="1" x2="47" y1="27" y2="27" stroke="rgba(255,255,255,.14)"/>${bars}</svg>`;
 };
 
+let selPromo = null;
 function renderPromos() {
   const n = D.takes.length, eps = new Set(D.takes.map(t => t.episode)).size;
+  const sorted = D.takes.slice().sort((a, b) => a.rank - b.rank);
+  if (!selPromo || !D.takes.some(t => t.id === selPromo)) selPromo = sorted[0] && sorted[0].id;
   const groups = PLAN_ORDER.map(g => ({ g, list: D.takes.filter(t => t.plan === g).sort((a, b) => a.rank - b.rank) })).filter(x => x.list.length);
-  const card = tk => {
-    const edited = isTrimmed(tk), s = saved[tk.id];
-    return `<article class="promo" style="--h:${hueOf(tk.episode)}">
-      <div class="promo-rank"><b>${tk.rank}</b><span>Ep ${tk.episode}</span></div>
-      <div class="promo-main">
-        <p class="promo-when"><span>${esc(segText(tk))}</span><span class="dot"></span><span>${durOf(tk).toFixed(1)} s</span>
-          ${tk.segments.length > 1 ? `<span class="tag">${tk.segments.length} segments, in order</span>` : '<span class="tag">one continuous stretch</span>'}
-          ${edited ? '<span class="tag warn">you moved the cut</span>' : ''}${s && s.d ? `<span class="tag ${s.d === 'keep' ? 'good' : s.d === 'trim' ? 'warn' : 'bad'}">you said ${s.d}</span>` : ''}</p>
-        <dl class="promo-facts">
-          <div><dt>Hook${tk.ai.hookType ? ` <small>${esc(tk.ai.hookType.replace(/_/g, ' '))}</small>` : ''}</dt><dd>${esc(tk.ai.hook)}</dd></div>
-          <div><dt>Cliffhanger</dt><dd>${esc(tk.ai.cliff)}</dd></div>
-          <div><dt>Why it works</dt><dd>${esc(tk.ai.why || 'No summary was written for this cut.')}</dd></div>
-        </dl>
-        <p class="promo-slot"><b>Why this slot.</b> ${esc(tk.ai.planReason || PLAN_NOTE[tk.plan] || '')}${tk.ai.spoiler && tk.ai.spoiler !== 'none' ? ` <span class="tag warn">${esc(tk.ai.spoiler)} spoiler</span>` : ''}</p>
-      </div>
-      <div class="promo-act"><button class="pill primary" data-open="${esc(tk.id)}" type="button">Watch and trim</button></div>
-    </article>`;
+  const poster = tk => {
+    const h = hueOf(tk.episode), s = saved[tk.id], q = (tk.ai.hook || '').replace(/^["“]|["”]$/g, '');
+    return `<button class="poster-card ${tk.id === selPromo ? 'on' : ''}" data-sel="${esc(tk.id)}" type="button" style="--h:${h};--h2:${partner(h)}" aria-label="Rank ${tk.rank}, episode ${tk.episode}, ${esc(q)}">
+      <span class="pc-top"><b>${tk.rank}</b><span>Ep ${tk.episode}</span><span class="pc-len">${durOf(tk).toFixed(0)} s</span></span>
+      <span class="pc-hook">${esc(q)}</span>
+      <span class="pc-cut" aria-hidden="true"></span>
+      <span class="pc-end"><small>Ends on</small>${esc(tk.ai.cliff || '')}</span>
+      ${s && s.d ? `<i class="pc-dot ${s.d}" title="You said ${s.d}"></i>` : ''}
+    </button>`;
   };
   E.promosPage.innerHTML = `
-    <header class="page-head">
-      <h1>${n} promos found in ${eps} of ${D.show.episodes} episodes</h1>
-      <p class="lede">In the order we would post them. Each one lists its segments with start and end times, the hook, the cliffhanger and why it works.</p>
-      <div class="head-actions"><button class="pill primary" id="dlCsv" type="button">Download results (CSV)</button><button class="pill" id="dlJson" type="button">Download results (JSON)</button></div>
-    </header>
-    <section class="why-order card">
-      <h2>How the order was decided</h2>
-      <ul>
-        <li><b>The strongest from each episode goes first</b>, earliest episodes first, because a new viewer lands on episode 1.</li>
-        <li><b>Clips a stranger could not follow are dropped</b>: an AI that sees only the clip must say what is happening and what it is waiting for.</li>
-        <li><b>Big twists are held back</b> so a promo does not spoil the show.</li>
-        <li><b>Overlapping cuts become alternates</b> instead of repeating the same moment twice.</li>
-      </ul>
-    </section>
-    ${groups.map(({ g, list }) => `<section class="promo-group"><div class="rail-title"><h2>${PLAN_NAME[g]}</h2><span>${list.length}</span></div><p class="rail-note">${PLAN_NOTE[g]}</p>${list.map(card).join('')}</section>`).join('')}`;
-  E.promosPage.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => openTake(b.dataset.open)));
+    <div class="promos-wide">
+      <header class="page-head">
+        <h1>${n} promos found in ${eps} of ${D.show.episodes} episodes</h1>
+        <p class="lede">Each poster is one promo: the lit top is its hook, the dimmed bottom is where the clip cuts off. Pick one to see its times and why it works.</p>
+        <div class="head-actions"><button class="pill primary" id="dlCsv" type="button">Download results (CSV)</button><button class="pill" id="dlJson" type="button">Download results (JSON)</button></div>
+        <details class="how"><summary>How the order was decided</summary>
+          <ul>
+            <li><b>The strongest from each episode goes first</b>, earliest episodes first, because a new viewer lands on episode 1.</li>
+            <li><b>Clips a stranger could not follow are dropped</b>: an AI that sees only the clip must say what is happening and what it is waiting for.</li>
+            <li><b>Big twists are held back</b> so a promo does not spoil the show.</li>
+            <li><b>Overlapping cuts become alternates</b> instead of repeating the same moment twice.</li>
+          </ul></details>
+      </header>
+      <div class="deck-layout">
+        <div class="deck">${groups.map(({ g, list }) => `<section class="deck-group"><div class="rail-title"><h2>${PLAN_NAME[g]}</h2><span>${list.length}</span></div><p class="rail-note">${PLAN_NOTE[g]}</p><div class="poster-grid">${list.map(poster).join('')}</div></section>`).join('')}</div>
+        <aside class="ticket" id="ticket" aria-live="polite"></aside>
+      </div>
+    </div>`;
+  E.promosPage.querySelectorAll('[data-sel]').forEach(b => b.addEventListener('click', () => pickPromo(b.dataset.sel, true)));
   $('#dlCsv', E.promosPage).addEventListener('click', () => downloadResults('csv'));
   $('#dlJson', E.promosPage).addEventListener('click', () => downloadResults('json'));
+  renderTicket();
+}
+function pickPromo(id, open) {
+  selPromo = id;
+  E.promosPage.querySelectorAll('.poster-card').forEach(b => b.classList.toggle('on', b.dataset.sel === id));
+  renderTicket();
+  if (open) $('#ticket').classList.add('open');
+}
+function renderTicket() {
+  const tk = D.takes.find(t => t.id === selPromo), el = $('#ticket'); if (!tk || !el) return;
+  const s = saved[tk.id], t = trimFor(tk), edited = isTrimmed(tk);
+  const sorted = D.takes.slice().sort((a, b) => a.rank - b.rank), i = sorted.indexOf(tk);
+  const seg = tk.segments.map((sg, k) => `<li><span class="seg-n">${tk.segments.length > 1 ? 'Segment ' + (k + 1) : 'Clip'}</span><b>Ep ${sg.episode}</b><span class="tc">${fmt(k === 0 ? t.in : sg.start)}</span><span class="arrow">to</span><span class="tc">${fmt(k === 0 ? t.out : sg.end)}</span></li>`).join('');
+  const plain = `Ep ${tk.episode}: ${segText(tk)}. Hook: ${tk.ai.hook} Cliffhanger: ${tk.ai.cliff} Why: ${tk.ai.why || ''}`;
+  el.innerHTML = `<button class="sheet-close icon-btn" id="tkClose" type="button" aria-label="Close details">&times;</button>
+    <div class="tk-head"><span class="tk-rank">${tk.rank}</span><div><p class="tk-eyebrow">${esc(PLAN_NAME[tk.plan])}</p><h2>Episode ${tk.episode}, ${durOf(tk).toFixed(1)} seconds</h2></div></div>
+    <ul class="segs">${seg}</ul>
+    <p class="tk-note">${tk.segments.length > 1 ? 'Play the segments in this order.' : 'One continuous stretch.'}${edited ? ' <span class="tag warn">you moved the cut</span>' : ''}${s && s.d ? ` <span class="tag ${s.d === 'keep' ? 'good' : s.d === 'trim' ? 'warn' : 'bad'}">you said ${s.d}</span>` : ''}</p>
+    <dl class="tk-facts">
+      <div><dt>Hook${tk.ai.hookType ? ` <small>${esc(tk.ai.hookType.replace(/_/g, ' '))}</small>` : ''}</dt><dd>${esc(tk.ai.hook)}</dd></div>
+      <div><dt>Cliffhanger</dt><dd>${esc(tk.ai.cliff)}</dd></div>
+      <div><dt>Why it works</dt><dd>${esc(tk.ai.why || 'No summary was written for this cut.')}</dd></div>
+      <div><dt>Why this slot</dt><dd>${esc(tk.ai.planReason || PLAN_NOTE[tk.plan] || '')}${tk.ai.spoiler && tk.ai.spoiler !== 'none' ? ` <span class="tag warn">${esc(tk.ai.spoiler)} spoiler</span>` : ''}</dd></div>
+    </dl>
+    <div class="tk-actions"><button class="pill primary" id="tkWatch" type="button">Watch and trim</button><button class="pill" id="tkCopy" type="button">Copy for the editor</button></div>
+    <div class="tk-nav"><button class="chip" id="tkPrev" type="button" ${i === 0 ? 'disabled' : ''}>Previous</button><span>${i + 1} of ${sorted.length}</span><button class="chip" id="tkNext" type="button" ${i === sorted.length - 1 ? 'disabled' : ''}>Next</button></div>`;
+  $('#tkWatch', el).addEventListener('click', () => openTake(tk.id));
+  $('#tkCopy', el).addEventListener('click', () => { (navigator.clipboard ? navigator.clipboard.writeText(plain) : Promise.reject()).then(() => toast('Copied.'), () => toast('Copy is blocked here. Use Download results instead.')); });
+  $('#tkClose', el).addEventListener('click', () => el.classList.remove('open'));
+  $('#tkPrev', el).addEventListener('click', () => stepPromo(-1)); $('#tkNext', el).addEventListener('click', () => stepPromo(1));
+}
+function stepPromo(d) {
+  const sorted = D.takes.slice().sort((a, b) => a.rank - b.rank), i = sorted.findIndex(t => t.id === selPromo), nx = sorted[clamp(i + d, 0, sorted.length - 1)];
+  if (nx) { pickPromo(nx.id, $('#ticket').classList.contains('open')); const c = E.promosPage.querySelector('.poster-card.on'); if (c) c.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' }); }
 }
 
 function renderSeason() {

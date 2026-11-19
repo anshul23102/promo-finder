@@ -58,7 +58,8 @@ Tests: `python3 -m unittest discover -s tests`
 A web app with five pages for a finished run: **Promos** (every promo with its segments, hook, cliffhanger, why it works and posting order; downloadable as CSV or JSON), **Review** (a vertical reel that plays the script as captions, a 3-second gate, a trim timeline that snaps to clean line breaks, keep/trim/pass, and a "Hide AI hints" mode for unbiased rating), **Season** (every episode at a glance), **Quality** (where the tool picks badly, measured) and **New show** (how to run it on another show). Code lives in `ui-claude/`.
 
 - **Try it now, no setup:** [live demo](https://anshul23102.github.io/promo-finder/) with a made-up show (`examples/the-last-edition/`, seven episodes). The demo data is synthetic; it contains no Kuku content.
-- **View your own run (stays on your machine):**
+- **Use it on your own scripts, in the browser:** `python3 ui-claude/workbench.py` opens a page where you drop episode files (or one ZIP), pick an engine (no AI, Groq, Gemini or a local model) and get the results pages. It binds to 127.0.0.1 only, checks a per-launch token, and asks you to confirm before any script text is sent to an AI provider.
+- **View a finished run (stays on your machine):**
 
 ```bash
 python3 ui-claude/serve.py --run private/runs/<your-run> --pack path/to/scripts.zip
