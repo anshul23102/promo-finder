@@ -371,7 +371,7 @@ function wire() {
   E.helpBtn.addEventListener('click', () => E.help.showModal());
   document.addEventListener('keydown', ev => {
     if (E.help.open || ev.metaKey || ev.ctrlKey || ev.altKey || !E.intro.classList.contains('gone')) return;
-    if (view === 'promos') { const k0 = ev.key; if (k0 === 'ArrowRight' || k0 === 'ArrowDown') { ev.preventDefault(); stepPromo(1); } else if (k0 === 'ArrowLeft' || k0 === 'ArrowUp') { ev.preventDefault(); stepPromo(-1); } return; }
+    if (view === 'promos') { const k0 = ev.key; if (k0 === 'Escape') closeDrawer(); else if (drawerOpen && (k0 === 'ArrowRight' || k0 === 'ArrowDown')) { ev.preventDefault(); stepPromo(1); } else if (drawerOpen && (k0 === 'ArrowLeft' || k0 === 'ArrowUp')) { ev.preventDefault(); stepPromo(-1); } return; }
     if (view !== 'review') return;
     if (ev.target.closest && ev.target.closest('.tl-handle') && (ev.key === 'ArrowUp' || ev.key === 'ArrowDown')) return;
     const k = ev.key.toLowerCase();
@@ -400,34 +400,80 @@ const segText = tk => {
 };
 const durOf = tk => { const t = trimFor(tk); return ((t.out - t.in) + tk.segments.slice(1).reduce((a, g) => a + (g.end - g.start), 0)) / 100; };
 const pct = (n, d) => d ? Math.round(n / d * 100) + '%' : 'n/a';
-const pulseSvg = ep => {
-  const bars = ep.pulse.map(([p, h, c]) => { const x = (p * 46 + 1).toFixed(1), top = 27 - Math.max(h, c) * 8.2;
-    return `<line x1="${x}" x2="${x}" y1="27" y2="${top.toFixed(1)}" stroke="${h >= c ? '#ff641c' : '#f8c543'}" stroke-width="1.6" stroke-linecap="round"/>`; }).join('');
-  return `<svg class="pulse" viewBox="0 0 48 28" aria-hidden="true"><line x1="1" x2="47" y1="27" y2="27" stroke="rgba(255,255,255,.14)"/>${bars}</svg>`;
-};
+const unq = s => String(s ?? '').replace(/^["“]|["”]$/g, '');
+const sortedTakes = () => D.takes.slice().sort((a, b) => a.rank - b.rank);
+const mmss = cs => { const s = Math.round(Math.max(0, cs) / 100), m = Math.floor(s / 60); return m + ':' + String(s % 60).padStart(2, '0'); };
+const range = (sg, tr) => `${fmt(tr ? tr.in : sg.start)} to ${fmt(tr ? tr.out : sg.end)}`;
 
-let selPromo = null;
-function renderPromos() {
-  const n = D.takes.length, eps = new Set(D.takes.map(t => t.episode)).size;
-  const sorted = D.takes.slice().sort((a, b) => a.rank - b.rank);
-  if (!selPromo || !D.takes.some(t => t.id === selPromo)) selPromo = sorted[0] && sorted[0].id;
-  const groups = PLAN_ORDER.map(g => ({ g, list: D.takes.filter(t => t.plan === g).sort((a, b) => a.rank - b.rank) })).filter(x => x.list.length);
-  const poster = tk => {
-    const h = hueOf(tk.episode), s = saved[tk.id], q = (tk.ai.hook || '').replace(/^["“]|["”]$/g, '');
-    return `<button class="poster-card ${tk.id === selPromo ? 'on' : ''}" data-sel="${esc(tk.id)}" type="button" style="--h:${h};--h2:${partner(h)}" aria-label="Rank ${tk.rank}, episode ${tk.episode}, ${esc(q)}">
-      <span class="pc-top"><b>${tk.rank}</b><span>Ep ${tk.episode}</span><span class="pc-len">${durOf(tk).toFixed(0)} s</span></span>
-      <span class="pc-hook">${esc(q)}</span>
-      <span class="pc-cut" aria-hidden="true"></span>
-      <span class="pc-end"><small>Ends on</small>${esc(tk.ai.cliff || '')}</span>
-      ${s && s.d ? `<i class="pc-dot ${s.d}" title="You said ${s.d}"></i>` : ''}
+let selPromo = null, drawerOpen = false, reelT = 0, reelI = 0;
+const flt = { ep: 0, mode: 'posters' };
+const clearReel = () => { clearTimeout(reelT); reelT = 0; };
+
+/* ---------- promos: reel hero, poster rails, ledger, detail drawer ---------- */
+function posterHtml(tk) {
+  const h = hueOf(tk.episode), s = saved[tk.id], q = unq(tk.ai.hook);
+  return `<button class="poster-card ${tk.id === selPromo && drawerOpen ? 'on' : ''}" data-sel="${esc(tk.id)}" type="button" style="--h:${h};--h2:${partner(h)}" aria-label="Rank ${tk.rank}, episode ${tk.episode}, ${esc(q)}">
+    <span class="pc-top"><b>${tk.rank}</b><span>Ep ${tk.episode}</span><span class="pc-len">${durOf(tk).toFixed(0)} s</span></span>
+    <span class="pc-hook">${esc(q)}</span>
+    <span class="pc-cut" aria-hidden="true"></span>
+    <span class="pc-end"><small>Ends on</small>${esc(tk.ai.cliff || '')}</span>
+    ${s && s.d ? `<i class="pc-dot ${s.d}" title="You said ${s.d}"></i>` : ''}
+  </button>`;
+}
+function ledgerHtml(list) {
+  return `<div class="ledger-wrap"><table class="ledger"><thead><tr><th>Rank</th><th>Where to cut</th><th>Hook</th><th>Cliffhanger</th><th>Why it works</th></tr></thead><tbody>${list.map(tk => `
+    <tr data-sel="${esc(tk.id)}" tabindex="0"><td class="lg-rank">${tk.rank}</td>
+    <td class="lg-where"><b>Episode ${tk.episode}</b>${tk.segments.map((sg, i) => `<span class="tc">${range(sg, i === 0 ? trimFor(tk) : null)}</span>`).join('')}<span class="tag">${esc(PLAN_NAME[tk.plan])}</span></td>
+    <td>${esc(unq(tk.ai.hook))}</td><td>${esc(tk.ai.cliff || '')}</td><td class="lg-why">${esc(tk.ai.why || '')}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function reelHtml(tk) {
+  const h = hueOf(tk.episode);
+  return `<button class="reel ph0" id="reelCard" type="button" style="--h:${h};--h2:${partner(h)}" aria-label="Open promo ${tk.rank}: ${esc(unq(tk.ai.hook))}">
+      <span class="r-top"><b>${tk.rank}</b><span>Episode ${tk.episode}</span><span class="r-len">${durOf(tk).toFixed(0)} s</span></span>
+      <span class="r-label" id="reelLabel">The hook</span>
+      <span class="r-hook">${esc(unq(tk.ai.hook))}</span>
+      <span class="r-cut" aria-hidden="true"></span>
+      <span class="r-end"><small>Ends on</small>${esc(tk.ai.cliff || '')}</span>
     </button>`;
-  };
+}
+function playReel(top) {
+  clearReel();
+  if (!$('#reelCard')) return;
+  const tk = top[reelI % top.length];
+  $('#reelCard').outerHTML = reelHtml(tk);
+  const card = $('#reelCard'), label = $('#reelLabel');
+  card.addEventListener('click', () => pickPromo(tk.id, true));
+  E.promosPage.querySelectorAll('.reel-dots button').forEach((b, k) => b.classList.toggle('on', k === reelI % top.length));
+  const phase = (p, text) => { card.className = 'reel ph' + p; label.textContent = text; };
+  if (reduced) { phase(3, 'Ends on'); return; }
+  const steps = [[60, () => phase(1, 'The hook, first 3 seconds')], [3300, () => phase(2, 'The cut')], [4300, () => phase(3, 'Ends on')], [9500, () => { reelI++; playReel(top); }]];
+  let at = 0;
+  const run = k => { if (k >= steps.length) return; reelT = setTimeout(() => { steps[k][1](); run(k + 1); }, steps[k][0] - at); at = steps[k][0]; };
+  run(0);
+}
+function renderPromos() {
+  clearReel();
+  const n = D.takes.length, eps = new Set(D.takes.map(t => t.episode)).size, all = sortedTakes();
+  if (!selPromo || !D.takes.some(t => t.id === selPromo)) selPromo = all[0] && all[0].id;
+  const top = all.slice(0, 3), qv = D.quality || {}, v = qv.viewer || {};
+  const proof = [
+    qv.violations != null ? [qv.violations, 'rule breaks across all clips'] : null,
+    v.ai && v.ai.viewed ? [pct(v.ai.passed, v.ai.viewed), 'followed by a cold viewer'] : null,
+    [`${eps} of ${D.show.episodes}`, 'episodes have a promo'],
+  ].filter(Boolean);
+  const epsWith = [...new Set(all.map(t => t.episode))].sort((a, b) => a - b);
+  const shown = all.filter(t => !flt.ep || t.episode === flt.ep);
+  const groups = PLAN_ORDER.map(g => ({ g, list: shown.filter(t => t.plan === g) })).filter(x => x.list.length);
+  const body = !shown.length ? '<p class="empty band">No promos for that episode.</p>'
+    : flt.mode === 'list' ? ledgerHtml(shown)
+    : groups.map(({ g, list }) => `<section class="rail-band ${g === 'post_first' ? 'first' : ''}"><div class="rail-head"><h2>${PLAN_NAME[g]}</h2><span class="count">${list.length}</span><p>${PLAN_NOTE[g]}</p></div><div class="rail ${g === 'post_first' ? 'big' : ''}">${list.map(posterHtml).join('')}</div></section>`).join('');
   E.promosPage.innerHTML = `
-    <div class="promos-wide">
-      <header class="page-head">
-        <h1>${n} promos found in ${eps} of ${D.show.episodes} episodes</h1>
-        <p class="lede">Each poster is one promo: the lit top is its hook, the dimmed bottom is where the clip cuts off. Pick one to see its times and why it works.</p>
-        <div class="head-actions"><button class="pill primary" id="dlCsv" type="button">Download results (CSV)</button><button class="pill" id="dlJson" type="button">Download results (JSON)</button></div>
+    <section class="hero-band">
+      <div class="hero-copy">
+        <h1>${n} promos, ready to post</h1>
+        <p class="lede">Found in ${eps} of ${D.show.episodes} episodes of ${esc(D.show.title)}. Start with the first, then work down. Each one opens on a hook and cuts off on a cliffhanger.</p>
+        <div class="head-actions"><button class="pill primary big" id="dlCsv" type="button">Download results (CSV)</button><button class="pill big" id="dlJson" type="button">JSON</button></div>
+        <ul class="proof">${proof.map(([a, b]) => `<li><b>${esc(a)}</b><span>${esc(b)}</span></li>`).join('')}</ul>
         <details class="how"><summary>How the order was decided</summary>
           <ul>
             <li><b>The strongest from each episode goes first</b>, earliest episodes first, because a new viewer lands on episode 1.</li>
@@ -435,102 +481,153 @@ function renderPromos() {
             <li><b>Big twists are held back</b> so a promo does not spoil the show.</li>
             <li><b>Overlapping cuts become alternates</b> instead of repeating the same moment twice.</li>
           </ul></details>
-      </header>
-      <div class="deck-layout">
-        <div class="deck">${groups.map(({ g, list }) => `<section class="deck-group"><div class="rail-title"><h2>${PLAN_NAME[g]}</h2><span>${list.length}</span></div><p class="rail-note">${PLAN_NOTE[g]}</p><div class="poster-grid">${list.map(poster).join('')}</div></section>`).join('')}</div>
-        <aside class="ticket" id="ticket" aria-live="polite"></aside>
       </div>
-    </div>`;
-  E.promosPage.querySelectorAll('[data-sel]').forEach(b => b.addEventListener('click', () => pickPromo(b.dataset.sel, true)));
+      <div class="reel-stage"><button class="reel ph0" id="reelCard" type="button"><span id="reelLabel"></span></button>
+        <div class="reel-dots" role="group" aria-label="Preview another promo">${top.map(t => `<button type="button" aria-label="Preview promo ${t.rank}"></button>`).join('')}</div>
+        <p class="reel-note">Preview of the top ${top.length}. Watch one hook, cut, then end on the cliffhanger. Click to open it.</p></div>
+    </section>
+    <section class="toolbar" aria-label="Layout and filter">
+      <div class="seg-toggle" role="group" aria-label="Layout"><button type="button" data-mode="posters" aria-pressed="${flt.mode === 'posters'}">Posters</button><button type="button" data-mode="list" aria-pressed="${flt.mode === 'list'}">List</button></div>
+      <div class="ep-filter" role="group" aria-label="Filter by episode"><button class="chip" type="button" data-fep="0" aria-pressed="${!flt.ep}">All episodes</button>${epsWith.map(e => `<button class="chip" type="button" data-fep="${e}" aria-pressed="${flt.ep === e}">Ep ${e}</button>`).join('')}</div>
+    </section>
+    <div id="deckBody">${body}</div>
+    <div class="scrim" id="scrim"></div>
+    <aside class="drawer" id="drawer" aria-live="polite" aria-label="Promo details"></aside>`;
+  reelI = 0; playReel(top);
+  E.promosPage.querySelectorAll('.reel-dots button').forEach((b, k) => { b.addEventListener('click', () => { reelI = k; playReel(top); }); });
+  const stage = $('.reel-stage', E.promosPage);
+  stage.addEventListener('mouseenter', () => { if (!reduced) clearReel(); });
+  stage.addEventListener('mouseleave', () => { if (!reduced && view === 'promos' && !drawerOpen) { reelI++; playReel(top); } });
+  E.promosPage.querySelectorAll('[data-sel]').forEach(b => {
+    b.addEventListener('click', () => pickPromo(b.dataset.sel, true));
+    if (b.tagName === 'TR') b.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pickPromo(b.dataset.sel, true); } });
+  });
+  E.promosPage.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { flt.mode = b.dataset.mode; renderPromos(); }));
+  E.promosPage.querySelectorAll('[data-fep]').forEach(b => b.addEventListener('click', () => { flt.ep = +b.dataset.fep; renderPromos(); }));
   $('#dlCsv', E.promosPage).addEventListener('click', () => downloadResults('csv'));
   $('#dlJson', E.promosPage).addEventListener('click', () => downloadResults('json'));
-  renderTicket();
+  $('#scrim', E.promosPage).addEventListener('click', closeDrawer);
+  renderDrawer();
 }
 function pickPromo(id, open) {
-  selPromo = id;
-  E.promosPage.querySelectorAll('.poster-card').forEach(b => b.classList.toggle('on', b.dataset.sel === id));
-  renderTicket();
-  if (open) $('#ticket').classList.add('open');
+  selPromo = id; if (open) drawerOpen = true;
+  E.promosPage.querySelectorAll('.poster-card').forEach(b => b.classList.toggle('on', drawerOpen && b.dataset.sel === id));
+  renderDrawer();
+  if (open) clearReel();
 }
-function renderTicket() {
-  const tk = D.takes.find(t => t.id === selPromo), el = $('#ticket'); if (!tk || !el) return;
-  const s = saved[tk.id], t = trimFor(tk), edited = isTrimmed(tk);
-  const sorted = D.takes.slice().sort((a, b) => a.rank - b.rank), i = sorted.indexOf(tk);
+function closeDrawer() { drawerOpen = false; E.promosPage.querySelectorAll('.poster-card.on').forEach(b => b.classList.remove('on')); renderDrawer(); }
+function renderDrawer() {
+  const tk = D.takes.find(t => t.id === selPromo), el = $('#drawer'), sc = $('#scrim'); if (!tk || !el) return;
+  el.classList.toggle('open', drawerOpen); sc.classList.toggle('open', drawerOpen); el.setAttribute('aria-hidden', String(!drawerOpen));
+  if (!drawerOpen) return;
+  const s = saved[tk.id], t = trimFor(tk), edited = isTrimmed(tk), all = sortedTakes(), i = all.indexOf(tk);
   const seg = tk.segments.map((sg, k) => `<li><span class="seg-n">${tk.segments.length > 1 ? 'Segment ' + (k + 1) : 'Clip'}</span><b>Ep ${sg.episode}</b><span class="tc">${fmt(k === 0 ? t.in : sg.start)}</span><span class="arrow">to</span><span class="tc">${fmt(k === 0 ? t.out : sg.end)}</span></li>`).join('');
   const plain = `Ep ${tk.episode}: ${segText(tk)}. Hook: ${tk.ai.hook} Cliffhanger: ${tk.ai.cliff} Why: ${tk.ai.why || ''}`;
-  el.innerHTML = `<button class="sheet-close icon-btn" id="tkClose" type="button" aria-label="Close details">&times;</button>
+  const cv = tk.ai.viewer || {};
+  el.innerHTML = `<button class="drawer-close icon-btn" id="tkClose" type="button" aria-label="Close details (Esc)">&times;</button>
     <div class="tk-head"><span class="tk-rank">${tk.rank}</span><div><p class="tk-eyebrow">${esc(PLAN_NAME[tk.plan])}</p><h2>Episode ${tk.episode}, ${durOf(tk).toFixed(1)} seconds</h2></div></div>
     <ul class="segs">${seg}</ul>
     <p class="tk-note">${tk.segments.length > 1 ? 'Play the segments in this order.' : 'One continuous stretch.'}${edited ? ' <span class="tag warn">you moved the cut</span>' : ''}${s && s.d ? ` <span class="tag ${s.d === 'keep' ? 'good' : s.d === 'trim' ? 'warn' : 'bad'}">you said ${s.d}</span>` : ''}</p>
     <dl class="tk-facts">
       <div><dt>Hook${tk.ai.hookType ? ` <small>${esc(tk.ai.hookType.replace(/_/g, ' '))}</small>` : ''}</dt><dd>${esc(tk.ai.hook)}</dd></div>
+      ${tk.ai.opening ? `<div><dt>First 3 seconds</dt><dd>${esc(unq(tk.ai.opening))}</dd></div>` : ''}
       <div><dt>Cliffhanger</dt><dd>${esc(tk.ai.cliff)}</dd></div>
       <div><dt>Why it works</dt><dd>${esc(tk.ai.why || 'No summary was written for this cut.')}</dd></div>
+      ${cv.situation ? `<div><dt>What a cold viewer understood</dt><dd>${esc(cv.situation)}${cv.open_question ? ` <span class="muted">Waiting to learn: ${esc(cv.open_question)}</span>` : ''}</dd></div>` : ''}
       <div><dt>Why this slot</dt><dd>${esc(tk.ai.planReason || PLAN_NOTE[tk.plan] || '')}${tk.ai.spoiler && tk.ai.spoiler !== 'none' ? ` <span class="tag warn">${esc(tk.ai.spoiler)} spoiler</span>` : ''}</dd></div>
     </dl>
     <div class="tk-actions"><button class="pill primary" id="tkWatch" type="button">Watch and trim</button><button class="pill" id="tkCopy" type="button">Copy for the editor</button></div>
-    <div class="tk-nav"><button class="chip" id="tkPrev" type="button" ${i === 0 ? 'disabled' : ''}>Previous</button><span>${i + 1} of ${sorted.length}</span><button class="chip" id="tkNext" type="button" ${i === sorted.length - 1 ? 'disabled' : ''}>Next</button></div>`;
-  $('#tkWatch', el).addEventListener('click', () => openTake(tk.id));
+    <div class="tk-nav"><button class="chip" id="tkPrev" type="button" ${i === 0 ? 'disabled' : ''}>Previous</button><span>${i + 1} of ${all.length}</span><button class="chip" id="tkNext" type="button" ${i === all.length - 1 ? 'disabled' : ''}>Next</button></div>`;
+  $('#tkWatch', el).addEventListener('click', () => { drawerOpen = false; openTake(tk.id); });
   $('#tkCopy', el).addEventListener('click', () => { (navigator.clipboard ? navigator.clipboard.writeText(plain) : Promise.reject()).then(() => toast('Copied.'), () => toast('Copy is blocked here. Use Download results instead.')); });
-  $('#tkClose', el).addEventListener('click', () => el.classList.remove('open'));
+  $('#tkClose', el).addEventListener('click', closeDrawer);
   $('#tkPrev', el).addEventListener('click', () => stepPromo(-1)); $('#tkNext', el).addEventListener('click', () => stepPromo(1));
 }
 function stepPromo(d) {
-  const sorted = D.takes.slice().sort((a, b) => a.rank - b.rank), i = sorted.findIndex(t => t.id === selPromo), nx = sorted[clamp(i + d, 0, sorted.length - 1)];
-  if (nx) { pickPromo(nx.id, $('#ticket').classList.contains('open')); const c = E.promosPage.querySelector('.poster-card.on'); if (c) c.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' }); }
+  if (!drawerOpen) return;
+  const all = sortedTakes(), i = all.findIndex(t => t.id === selPromo), nx = all[clamp(i + d, 0, all.length - 1)];
+  if (nx) { pickPromo(nx.id, true); const c = E.promosPage.querySelector('.poster-card.on'); if (c) c.scrollIntoView({ block: 'nearest', inline: 'center', behavior: reduced ? 'auto' : 'smooth' }); }
 }
+function showPromo(id) { selPromo = id; drawerOpen = true; if (view === 'promos') renderPromos(); else location.hash = '#/promos'; }
 
+/* ---------- season: one wide row per episode, promos drawn where they sit ---------- */
+const trackSvg = ep => {
+  const bars = ep.pulse.map(([p, h, c]) => { const x = (p * 1000).toFixed(1), top = 54 - Math.max(h, c) * 15;
+    return `<line x1="${x}" x2="${x}" y1="56" y2="${top.toFixed(1)}" stroke="${h >= c ? '#ff641c' : '#f8c543'}" stroke-width="2.4" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`; }).join('');
+  return `<svg class="ep-pulse" viewBox="0 0 1000 60" preserveAspectRatio="none" aria-hidden="true">${bars}</svg>`;
+};
 function renderSeason() {
-  const covered = D.episodes.filter(e => e.takes.length).length;
+  const covered = D.episodes.filter(e => e.takes.length).length, gaps = D.episodes.length - covered;
+  const row = ep => {
+    const takes = ep.takes.map(id => D.takes.find(t => t.id === id)).filter(Boolean), dur = Math.max(1, ep.duration);
+    const brackets = takes.flatMap(tk => tk.segments.filter(sg => sg.episode === ep.n).map(sg => {
+      const l = (sg.start / dur * 100).toFixed(2), w = Math.max(1.2, (sg.end - sg.start) / dur * 100).toFixed(2);
+      return `<button class="br" type="button" data-take="${esc(tk.id)}" style="left:${l}%;width:${w}%" aria-label="Promo ${tk.rank}, ${mmss(sg.start)} to ${mmss(sg.end)}"><i>${tk.rank}</i></button>`; })).join('');
+    const state = takes.length ? `<span class="tag good">${takes.length} promo${takes.length > 1 ? 's' : ''}</span>` : ep.scored ? '<span class="tag warn">scored, none passed</span>' : '<span class="tag">not run</span>';
+    return `<li class="eprow ${takes.length ? 'has' : 'gap'}"><div class="ep-id"><b>${String(ep.n).padStart(2, '0')}</b><span>${mmss(ep.duration)}</span></div>
+      <div class="ep-body"><p class="ep-log">${esc(ep.logline || 'No logline in the script.')}</p><div class="ep-track">${ep.scored ? trackSvg(ep) : ''}<span class="ep-base"></span>${brackets}</div></div>
+      <div class="ep-side">${state}${takes[0] ? `<button class="pill" type="button" data-take="${esc(takes[0].id)}">Open</button>` : ''}</div></li>`;
+  };
   E.seasonPage.innerHTML = `
-    <header class="page-head"><h1>Every episode at a glance</h1>
-      <p class="lede">${covered} of ${D.show.episodes} episodes have a promo. The small line under each episode shows where the AI saw a good place to open a clip (orange) or end one (gold); taller means stronger.</p></header>
-    <div class="season-grid">${D.episodes.map(ep => `<button class="season-tile ${ep.takes.length ? 'has' : ''}" data-ep="${ep.n}" type="button">
-      <b>Episode ${ep.n}</b>${ep.scored ? pulseSvg(ep) : '<span class="muted">Not scored in this run</span>'}
-      <span class="logline">${esc(ep.logline || '')}</span>
-      <span class="season-foot">${ep.takes.length ? `<span class="tag good">${ep.takes.length} promo${ep.takes.length > 1 ? 's' : ''}</span>` : ep.scored ? '<span class="tag warn">scored, no promo passed</span>' : '<span class="tag">not run</span>'}</span></button>`).join('')}</div>`;
-  E.seasonPage.querySelectorAll('.season-tile').forEach(b => b.addEventListener('click', () => {
-    const t = D.takes.find(x => x.episode === +b.dataset.ep);
-    if (t) openTake(t.id); else toast(`No promo for episode ${b.dataset.ep} in this run.`);
-  }));
+    <section class="hero-band" data-mark="${D.episodes.length}">
+      <div class="hero-copy"><h1>Every episode at a glance</h1>
+        <p class="lede">Each row is one episode, start to end. The orange and gold lines show where the AI saw a good place to open a clip or end one. The boxes are the promos that were cut, placed where they sit in the episode.</p></div>
+      <dl class="stat-stack"><div><dt>Episodes with a promo</dt><dd>${covered}<small> of ${D.episodes.length}</small></dd></div><div><dt>Promos in total</dt><dd>${D.takes.length}</dd></div><div><dt>Episodes without one</dt><dd class="${gaps ? 'warn' : ''}">${gaps}</dd></div></dl>
+    </section>
+    <section class="legend"><span><i class="lg o"></i>Good place to open</span><span><i class="lg g"></i>Good place to end</span><span><i class="lg b"></i>A promo, numbered by rank</span><span class="muted">Taller lines are stronger.</span></section>
+    <ol class="eprows">${D.episodes.map(row).join('')}</ol>`;
+  E.seasonPage.querySelectorAll('[data-take]').forEach(b => b.addEventListener('click', () => showPromo(b.dataset.take)));
 }
 
+/* ---------- quality: measured checks, each with what it cannot prove ---------- */
 function renderQuality() {
   const q = D.quality || {}, w = q.writer || {}, v = q.viewer || {}, j = q.judge || {}, rej = Object.entries(q.rejections || {});
   const rows = Object.values(saved).filter(x => x && x.d), keptTop = D.takes.filter(t => t.plan === 'post_first' && saved[t.id] && saved[t.id].d);
   const kept = a => a.filter(t => saved[t.id].d !== 'pass').length;
-  const bars = rej.map(([k, c]) => `<li><span>${esc(k)}</span><i style="--w:${(c / Math.max(...rej.map(r => r[1])) * 100).toFixed(0)}%"></i><b>${c}</b></li>`).join('');
+  const mx = Math.max(1, ...rej.map(r => r[1]));
+  const bars = rej.map(([k, c]) => `<li><span>${esc(k)}</span><i style="--w:${(c / mx * 100).toFixed(0)}%"></i><b>${c}</b></li>`).join('');
   const kind = r => r.kind === 'human' ? 'Human reviewer' : 'Second AI (not a person)';
   const slotBias = j.average_place_by_slot ? Math.max(...Object.values(j.average_place_by_slot)) - Math.min(...Object.values(j.average_place_by_slot)) : null;
+  const meter = (label, a, b) => b ? `<div class="meter-row"><span>${label}</span><div class="meter"><i style="--w:${Math.round(a / b * 100)}%"></i></div><b>${pct(a, b)}</b></div>` : '';
+  const cov = q.coverage && q.coverage.episodes ? q.coverage : null;
   E.qualityPage.innerHTML = `
-    <header class="page-head"><h1>Where the tool picks badly</h1>
-      <p class="lede">Measured on this run, not promised. Each check says what it tests, what the number is, and what it cannot prove.</p></header>
-    <div class="cards2">
-      <article class="card stat"><h2>Hard rules</h2><p class="big ${q.violations ? 'bad' : 'good'}">${q.violations ?? 'n/a'} broken</p>
-        <p class="muted">Across ${q.promos ?? D.takes.length} promos: 20 to 60 seconds, something in the first 3 seconds, no cut through a spoken line, no opening on a half-sentence. Code re-checks every promo, so this should be zero. <b>Cannot prove</b> the promo is good, only that it is legal.</p></article>
-      <article class="card stat"><h2>Does it find the writers' own cliffhangers?</h2><p class="big">${w.labels ? `${w.hit_last_10s} of ${w.labels}` : 'n/a'}</p>
-        <p class="muted">The scripts' continuity notes flag some episode-ending cliffhangers. This counts promos that end within 10 seconds of one. <b>Cannot prove</b> a viewer would stop scrolling.</p></article>
-      <article class="card stat"><h2>Does a stranger follow it?</h2><p class="big">${v.ai ? pct(v.ai.passed, v.ai.viewed) : 'n/a'}</p>
-        <p class="muted">${v.ai ? `An AI that sees only the clip passed ${v.ai.passed} of ${v.ai.viewed} AI-picked cuts` : ''}${v.rules && v.rules.viewed ? ` and ${v.rules.passed} of ${v.rules.viewed} cuts from a plain no-AI baseline` : ''}. <b>Cannot prove</b> the AI judge is right; it is another model.</p></article>
-      <article class="card stat"><h2>Is the ranking judge steady?</h2><p class="big">${j.repeat_pair_agreement != null ? Math.round(j.repeat_pair_agreement * 100) + '%' : 'n/a'}</p>
-        <p class="muted">When the same pair was compared twice in different positions, the judge agreed with itself this often${slotBias != null ? `; position bias spread ${slotBias.toFixed(2)} (0 means none)` : ''}. <b>Cannot prove</b> the order matches an editor's taste.</p></article>
-    </div>
-    <section class="card wide"><h2>What it threw away, and why</h2>
-      ${rej.length ? `<ul class="bars">${bars}</ul><p class="muted">Every rejected cut is kept in <code>rejected.json</code> so a person can overrule the tool.</p>` : '<p class="muted">Nothing was rejected in this run.</p>'}
-      <p class="muted">Coverage: ${q.coverage && q.coverage.episodes ? `${q.coverage.episodes_with_a_promo} of ${q.coverage.episodes} scored episodes have a promo.` : 'n/a'}</p></section>
-    <section class="card wide"><h2>People against the tool</h2>
-      ${(q.reviews || []).length ? `<ul class="rev">${q.reviews.map(r => `<li><b>${kind(r)}</b> rated ${r.n}: keep ${r.keep}, trim ${r.trim}, pass ${r.pass}.</li>`).join('')}</ul>
-        ${q.agreement ? `<p class="muted">The two reviewers gave the same verdict on ${q.agreement.identical} of ${q.agreement.cuts} promos (Cohen's kappa ${q.agreement.kappa_three_way}). A second AI is not a stand-in for a person, so these are reported separately.</p>` : ''}`
-        : '<p class="muted">No outside ratings were loaded with this run.</p>'}
-      <div class="yours"><h3>Your ratings in this browser</h3>
-        ${rows.length ? `<p>You rated ${rows.length} of ${D.takes.length}: keep ${rows.filter(x => x.d === 'keep').length}, trim ${rows.filter(x => x.d === 'trim').length}, pass ${rows.filter(x => x.d === 'pass').length}.${keptTop.length ? ` Of the ${keptTop.length} "Post first" promos you rated, you kept or trimmed ${kept(keptTop)}.` : ''}</p>` : '<p class="muted">Rate promos on the Review page and your numbers appear here. Export them and run the tool with <code>--review</code> to score it against you.</p>'}</div></section>
-    <section class="card wide"><h2>Known weak spots</h2>
-      <ul class="weak">
-        <li><b>It reads a script, not footage.</b> It cannot see acting, pacing or whether a face makes someone stop.</li>
-        <li><b>The judges are models.</b> A strict judge can throw out a good cut; a lenient one can wave through a dull one. Without people rating cuts nobody knows which.</li>
-        <li><b>One continuous stretch.</b> The brief allows joining moments across episodes. The current finder does not build joins; the older editor mode did, and it was less reliable.</li>
-        <li><b>Timestamps come from the screenplay.</b> If the final edit drifts from it, every cut point drifts too.</li>
-        <li><b>Small samples.</b> One show and one made-up demo so far. Treat the numbers as a first reading.</li>
+    <section class="hero-band" data-mark="%">
+      <div class="hero-copy"><h1>Where the tool picks badly</h1>
+        <p class="lede">Measured on this run, not promised. Every check says what it tests, what the number is, and what it cannot prove.</p></div>
+      <dl class="stat-stack"><div><dt>Rules broken</dt><dd class="${q.violations ? 'bad' : 'good'}">${q.violations ?? 'n/a'}</dd></div><div><dt>Promos checked</dt><dd>${q.promos ?? D.takes.length}</dd></div>${v.ai ? `<div><dt>Cold viewer followed</dt><dd>${pct(v.ai.passed, v.ai.viewed)}</dd></div>` : ''}</dl>
+    </section>
+    <section class="q-grid">
+      <article class="qc a"><h2>Hard rules</h2><p class="qbig ${q.violations ? 'bad' : 'good'}">${q.violations ?? 'n/a'} broken</p>
+        <p>Across ${q.promos ?? D.takes.length} promos: 20 to 60 seconds, something in the first 3 seconds, no cut through a spoken line, no opening on a half-sentence. Code re-checks every promo, so this should be zero.</p><p class="cant">Cannot prove the promo is good, only that it is legal.</p></article>
+      <article class="qc b"><h2>Does it find the writers' own cliffhangers?</h2><p class="qbig">${w.labels ? `${w.hit_last_10s} of ${w.labels}` : 'n/a'}</p>
+        ${w.labels ? meter('Promos ending within 10 s of one', w.hit_last_10s, w.labels) : ''}
+        <p>The scripts' continuity notes flag some episode-ending cliffhangers. This counts promos that end within 10 seconds of one.</p><p class="cant">Cannot prove a viewer would stop scrolling.</p></article>
+      <article class="qc c"><h2>Does a stranger follow it?</h2>
+        ${v.ai ? meter('AI-picked cuts', v.ai.passed, v.ai.viewed) : '<p class="qbig">n/a</p>'}${v.rules && v.rules.viewed ? meter('Plain no-AI baseline', v.rules.passed, v.rules.viewed) : ''}
+        <p>An AI that sees only the clip says what is happening and what it is waiting for. A pass means it understood.</p><p class="cant">Cannot prove the AI judge is right; it is another model.</p></article>
+      <article class="qc d"><h2>Is the ranking judge steady?</h2><p class="qbig">${j.repeat_pair_agreement != null ? Math.round(j.repeat_pair_agreement * 100) + '%' : 'n/a'}</p>
+        <p>When the same pair was compared twice in different positions, the judge agreed with itself this often${slotBias != null ? `. Position bias spread ${slotBias.toFixed(2)} (0 means none)` : ''}.</p><p class="cant">Cannot prove the order matches an editor's taste.</p></article>
+    </section>
+    <section class="band dark q-split">
+      <div><h2>What it threw away, and why</h2>
+        ${rej.length ? `<ul class="bars">${bars}</ul><p class="muted">Every rejected cut is kept in <code>rejected.json</code> so a person can overrule the tool.</p>` : '<p class="muted">Nothing was rejected in this run.</p>'}</div>
+      <div class="cover"><p class="qbig">${cov ? `${cov.episodes_with_a_promo} of ${cov.episodes}` : 'n/a'}</p><p>scored episodes have a promo.</p></div>
+    </section>
+    <section class="band warm q-split">
+      <div><h2>People against the tool</h2>
+        ${(q.reviews || []).length ? `<ul class="rev">${q.reviews.map(r => `<li><b>${kind(r)}</b> rated ${r.n}: keep ${r.keep}, trim ${r.trim}, pass ${r.pass}.</li>`).join('')}</ul>
+          ${q.agreement ? `<p class="muted">The two reviewers gave the same verdict on ${q.agreement.identical} of ${q.agreement.cuts} promos (Cohen's kappa ${q.agreement.kappa_three_way}). A second AI is not a stand-in for a person, so these are reported separately.</p>` : ''}`
+          : '<p class="muted">No outside ratings were loaded with this run.</p>'}</div>
+      <div class="yours"><h2>Your ratings in this browser</h2>
+        ${rows.length ? `<p>You rated ${rows.length} of ${D.takes.length}: keep ${rows.filter(x => x.d === 'keep').length}, trim ${rows.filter(x => x.d === 'trim').length}, pass ${rows.filter(x => x.d === 'pass').length}.${keptTop.length ? ` Of the ${keptTop.length} "Post first" promos you rated, you kept or trimmed ${kept(keptTop)}.` : ''}</p>` : '<p class="muted">Rate promos on the Review page and your numbers appear here. Export them and run the tool with <code>--review</code> to score it against you.</p>'}</div>
+    </section>
+    <section class="band weak-band"><h2>Known weak spots</h2>
+      <ul class="weak2">
+        <li><b>It reads a script, not footage.</b><span>It cannot see acting, pacing or whether a face makes someone stop.</span></li>
+        <li><b>The judges are models.</b><span>A strict judge can throw out a good cut; a lenient one can wave through a dull one. Without people rating cuts nobody knows which.</span></li>
+        <li><b>One continuous stretch.</b><span>The brief allows joining moments across episodes. The current finder does not build joins; the older editor mode did, and it was less reliable.</span></li>
+        <li><b>Timestamps come from the screenplay.</b><span>If the final edit drifts from it, every cut point drifts too.</span></li>
+        <li><b>Small samples.</b><span>One show and one made-up demo so far. Treat the numbers as a first reading.</span></li>
       </ul></section>`;
 }
 
@@ -568,6 +665,7 @@ function route() {
   document.querySelectorAll('.view').forEach(el => el.classList.toggle('on', el.id === 'v-' + view));
   E.nav.querySelectorAll('a').forEach(a => { const on = a.dataset.nav === view; a.classList.toggle('on', on); if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   if (view !== 'review') stop();
+  if (view !== 'promos') clearReel();
   if (view === 'promos') renderPromos();
   if (view === 'season') renderSeason();
   if (view === 'quality') renderQuality();
