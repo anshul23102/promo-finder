@@ -256,6 +256,28 @@ class ResilientRunTest(unittest.TestCase):
                 main(args, log_fn=lambda _: None)
 
 
+class WhyAndHookTest(unittest.TestCase):
+    def test_hook_is_what_is_on_screen_in_the_first_three_seconds(self):
+        from promo.export import opening_text
+        ep = episode()
+        cut, why = build(ep, cue(ep, '"Line 1?"'), cue(ep, '"Line 6?"'), "editor")
+        self.assertEqual(why, "ok")
+        self.assertEqual(opening_text(cut, {1: ep}), '"Line 1?"')
+
+    def test_fallback_why_quotes_the_clip_not_a_template_of_paraphrases(self):
+        from promo.ai import fallback_why
+        line = fallback_why('"No." / The thug shoves her back.', "Will he fight them?")
+        self.assertEqual(line, 'Opens on "No." and cuts with this still open: Will he fight them?')
+        self.assertIn("No summary", fallback_why("", ""))
+
+    def test_only_a_real_one_liner_replaces_the_fallback(self):
+        from promo.ai import usable_why
+        self.assertIsNone(usable_why(""))
+        self.assertIsNone(usable_why("Good."))
+        self.assertIsNone(usable_why("word " * 60))
+        self.assertEqual(usable_why("  A thug shoves her, and we need to know if he fights back. "), "A thug shoves her, and we need to know if he fights back.")
+
+
 class SchemaTest(unittest.TestCase):
     def test_check_and_lenient_json(self):
         schema = obj(order=array(string("A", "B")), reason=string())

@@ -1,5 +1,6 @@
 """Find, check and rank promos in a folder or ZIP of timestamped screenplays.
 
+    python -m promo SCRIPTS.zip                                   # no AI, nothing leaves this computer (the default)
     python -m promo SCRIPTS.zip --model gemini --judge gemini:gemini-flash-lite-latest
     python -m promo SCRIPTS.zip --model ollama:qwen3:4b          # offline, slower, weaker
     python -m promo SCRIPTS.zip --model rules                     # no AI at all (baseline)
@@ -21,7 +22,7 @@ from . import ai, beats, plan
 from .evaluate import AI_SOURCES
 from .cuts import Cut, build, join, overlap
 from .evaluate import evaluate
-from .export import write_all
+from .export import opening_text, write_all
 from .llm import Model, ModelError, load_dotenv
 from .screenplay import Episode, load_episodes, propose
 
@@ -29,7 +30,7 @@ from .screenplay import Episode, load_episodes, propose
 def arguments(argv=None):
     p = argparse.ArgumentParser(prog="python -m promo", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("input", type=Path, help="A ZIP, a folder of .txt episodes, or one .txt episode")
-    p.add_argument("--model", default="gemini", help="Editor model: provider[:model] or 'rules' (default gemini)")
+    p.add_argument("--model", default="rules", help="Editor model: provider[:model] or 'rules' (default: rules, no AI, nothing leaves this computer)")
     p.add_argument("--judge", help="Cold-viewer and ranking model (default: same as --model)")
     p.add_argument("--out", type=Path, help="Output folder (default private/runs/<time>)")
     p.add_argument("--cache", type=Path, default=Path("private/cache"))
@@ -43,6 +44,9 @@ def arguments(argv=None):
                         "editor: the model proposes whole promos (v3)")
     p.add_argument("--recover", action=argparse.BooleanOptionalAction, default=True,
                    help="Try unseen alternate cuts for uncovered episodes (default on)")
+    p.add_argument("--why", action=argparse.BooleanOptionalAction, default=True,
+                   help="Ask the judge model for a one-sentence reason per shortlisted clip (default on; off = quote the clip instead)")
+    p.add_argument("--why-model", help="A different model to write the one-line reasons (default: the judge model)")
     p.add_argument("--no-guide", action="store_true", help="Skip the whole-show read (needed when the provider caps a request below ~50k tokens, e.g. Groq free)")
     p.add_argument("--joins", action="store_true", help="Also try cross-episode joined promos (off: 0 survived in testing)")
     p.add_argument("--title", help="Show name for the report")
@@ -131,7 +135,7 @@ def rules_cuts(ep, limit=1, source="rules"):
         cut, _ = build(ep, w.hook, w.closing, source, preserve_ending=source == "recovery")
         if cut:
             out.append({"cut": cut, "hook_type": "shocking_line", "hook": w.hook.text, "spoiler": "none",
-                        "open_question": w.closing.text, "why": "Rules: top-scoring opening and closing cues.",
+                        "open_question": w.closing.text, "why": "Picked by word-based rules, not judged by a model: a strong opening line and an unresolved closing line.",
                         "rules_score": w.score})
     return out
 
@@ -344,6 +348,21 @@ def main(argv=None, *, key=None, base_url=None, log_fn=None):
         if e not in pool:
             e["strength"] = min((x["strength"] for x in pool), default=1.0) * 0.5
     ordered = plan.order(passing, last)
+
+    # 5b. one real sentence on why each shortlisted clip works (falls back to quoting the clip if no model answers) ------
+    if args.why and (judge_available or finder_available) and (judge or editor_model):
+        writer = make(args.why_model) if args.why_model else (judge if judge_available else editor_model)
+        log(f"Writing one line on why each of {len(ordered)} clips works ({writer.label}) ...")
+        for e in ordered:
+            try:
+                record = ai.explain(writer, e["cut"], by_number, opening_text(e["cut"], by_number), e.get("view"))
+                raw.append(record)
+                line = ai.usable_why(record["answer"]["why"])
+                if line:
+                    e["why"], e["why_source"] = line, "model"
+            except ModelError as exc:
+                warn(f"The one-line explanations stopped ({str(exc)[:140]}). The rest quote the clip instead.")
+                break
 
     # 6. evaluate and export -------------------------------------------------------------------
     usage = [m.usage() for m in {id(m): m for m in (editor_model, judge) if m}.values()]

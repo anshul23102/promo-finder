@@ -90,6 +90,7 @@ def main():
     ap.add_argument("--beats", type=Path, action="append", default=[])
     ap.add_argument("--review", action="append", default=[], help="id|name|kind|csv (repeatable)")
     ap.add_argument("--out", type=Path, default=Path("private/ui-claude"))
+    ap.add_argument("--fill", type=Path, help="A no-AI run over the whole pack. Its cuts for episodes the main run did not cover are added as rules candidates (never as judged promos)")
     ap.add_argument("--demo", action="store_true", help="Mark the data as a made-up demo show (the UI shows a banner)")
     args = ap.parse_args()
 
@@ -154,13 +155,31 @@ def main():
         coverage.append({"episode": c["episode"], "status": c.get("status", ""), "reason": c.get("reason", ""),
                          "cut": {"segments": [{k: sg.get(k) for k in ("episode", "start", "end", "start_cs", "end_cs", "duration_s")} for sg in cut["segments"]],
                                  "opening": cut.get("opening", ""), "ending": cut.get("ending", "")} if cut else None})
+    filled = 0
+    if args.fill and (args.fill / "coverage.json").is_file():
+        have = {c["episode"] for c in coverage}
+        for c in json.loads((args.fill / "coverage.json").read_text(encoding="utf-8")):
+            cut = c.get("cut")
+            if c["episode"] in have or not cut:
+                continue
+            for sg in cut["segments"]:
+                for k in ("start", "end"):
+                    if sg.get(k + "_cs") is None:
+                        m, sec = str(sg[k]).split(":")
+                        sg[k + "_cs"] = round((int(m) * 60 + float(sec)) * 100)
+            coverage.append({"episode": c["episode"], "status": "Rules candidate",
+                             "reason": "Found by word-based rules. No AI judge ran on this episode, so this is material for an editor, not a judged promo.",
+                             "cut": {"segments": [{k: sg.get(k) for k in ("episode", "start", "end", "start_cs", "end_cs", "duration_s")} for sg in cut["segments"]],
+                                     "opening": cut.get("opening", ""), "ending": cut.get("ending", "")}})
+            filled += 1
+        coverage.sort(key=lambda c: c["episode"])
     viewed = sum((v or {}).get("viewed", 0) for v in ev_ab.values()) if ev_ab else None
     ai_run = summary.get("editor_model", "rules") != "rules"
     run = {   # what happened in this run, for the header of every page
         "ai": ai_run, "finder": summary.get("finder", ""), "pack": len(episodes), "requested": summary.get("episodes"),
-        "scored": len(pulse) if ai_run and summary.get("finder") == "beats" else None,
+        "scored": len(pulses([args.run], episodes)) if ai_run and summary.get("finder") == "beats" else None,   # this run's own beat scores only, not older runs shown on the strip
         "candidates": summary.get("candidates"), "judged": viewed if ai_run else None, "shortlisted": summary.get("passed", len(takes)),
-        "warnings": list(summary.get("warnings") or []),
+        "warnings": list(summary.get("warnings") or []), "filled": filled,
     }
     payload = {
         "run": run, "coverage": coverage,

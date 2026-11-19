@@ -144,6 +144,37 @@ def passes(view: dict) -> tuple[bool, str]:
     return True, "passed"
 
 
+WHY_SYSTEM = """You are a short-form video editor. In ONE sentence you tell a colleague why this clip is worth posting.
+You get the first 3 seconds, the whole clip, and what a stranger understood from it. Write at most 30 words in plain words:
+what in the first 3 seconds would stop a scrolling stranger, and what they are left needing to know at the end.
+Describe the clip's events and the open question. Use only what the clip shows. Never mention viewers, the audience, a hook,
+a cliffhanger, scores or rules."""
+WHY_SCHEMA = obj(why=string())
+
+
+def explain(model: Model, cut: Cut, episodes, opening: str, view: dict | None) -> dict:
+    """One sentence on why the clip works, written from the clip itself (not a template)."""
+    view = view or {}
+    user = (f"FIRST 3 SECONDS:\n{opening}\n\nWHAT A STRANGER UNDERSTOOD: {view.get('situation', 'not recorded')}\n"
+            f"LEFT WONDERING: {view.get('open_question', 'not recorded')}\n\nCLIP:\n{clip_text(cut, episodes, {})}")
+    return model.ask("why", WHY_SYSTEM, user, WHY_SCHEMA, max_tokens=900)
+
+
+def usable_why(text: str) -> str | None:
+    """The sentence if it is a real one-liner, else None (the caller then uses the plain fallback)."""
+    text = " ".join(str(text or "").split())
+    return text if 4 <= len(text.split()) <= 45 else None
+
+
+def fallback_why(opening: str, question: str) -> str:
+    """No model needed: quote what opens the clip and what is still open at the end."""
+    first = " ".join(str(opening or "").split()).split(" / ")[0].strip(' "')
+    first = first if len(first) <= 90 else first[:89].rsplit(" ", 1)[0] + "..."
+    ask = " ".join(str(question or "").split()).rstrip(".")
+    ask += "" if ask.endswith(("?", "!")) else "."
+    return f'Opens on "{first}" and cuts with this still open: {ask}' if first and ask else (f'Opens on "{first}".' if first else "No summary was written for this cut.")
+
+
 # ---------------------------------------------------------------- 4. ranking
 RANK_SYSTEM = """You are a TikTok viewer in the US who has never seen this show. Below are several short clips
 (full text of each). Rank them by which one you would be most likely to stop for in the first 3 seconds AND then

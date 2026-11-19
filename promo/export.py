@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from . import plan
-from .ai import clip_text
+from .ai import clip_text, fallback_why
 from .cuts import HOOK_WINDOW, following
 from .coverage import episode_coverage
 from .llm import save_json
@@ -20,6 +20,14 @@ def safe_cell(value):
     """Stop a spreadsheet from running a model- or script-supplied cell as a formula."""
     text = str(value)
     return "'" + text if text[:1] in ("=", "+", "-", "@", "\t", "\r") else value
+
+
+def opening_text(cut, episodes) -> str:
+    """What is on screen in the first 3 seconds (a pure visual opening shows its camera shot)."""
+    first = cut.segments[0]
+    early = [c for c in episodes[first.episode].cues if c.kind != "sound" and first.start <= c.start < first.start + HOOK_WINDOW]
+    spoken = [c for c in early if c.kind in ("dialogue", "action")]
+    return " / ".join(c.text for c in (spoken or early))
 
 
 def promo_row(e: dict, episodes) -> dict:
@@ -36,23 +44,23 @@ def promo_row(e: dict, episodes) -> dict:
             if c.kind in ("dialogue", "action") and closing.end <= c.start < last.end and c.end <= last.end]
     closing_evidence = " / ".join([closing.text, *tail])
     view = e.get("view") or {}
-    first = cut.segments[0]
-    ep0 = episodes[first.episode]
-    early = [c for c in ep0.cues if c.kind != "sound" and first.start <= c.start < first.start + HOOK_WINDOW]
-    spoken = [c for c in early if c.kind in ("dialogue", "action")]
-    opening = " / ".join(c.text for c in (spoken or early))  # a pure visual opening shows its camera shot
-    hook, question, why = e["hook"], e["open_question"], e["why"]
+    opening = opening_text(cut, episodes)
+    summary_of_hook, question, why = e["hook"], e["open_question"], e["why"]
+    hook = opening or summary_of_hook                   # the hook is what is actually on screen in the first 3 seconds
     if cut.source in ("rules", "recovery"):  # the no-AI finder only has raw cue text; use what a stranger actually took from the clip
-        hook = opening or hook
         question = view.get("open_question") or question
-        why = (f"A cold viewer read it as: {view['situation']}" if view.get("situation") else why)
+        if e.get("why_source") != "model":
+            why = f"A cold viewer read it as: {view['situation']}" if view.get("situation") else why
+    if e.get("why_source") != "model" and cut.source not in ("rules", "recovery"):
+        why = fallback_why(hook, question)              # the old glued-together template is gone
     e = {**e, "hook": hook, "open_question": question, "why": why}
     return {
         "id": e["id"], "rank": e["rank"], "plan": e["plan"], "score": e["score"], "appeal": e["appeal"],
         "episode": cut.first_episode, "episodes": sorted({s.episode for s in cut.segments}),
         "start": segs[0]["start"], "end": segs[-1]["end"], "segments": segs,
         "duration_s": cut.length / 100, "source": cut.source, "hook_type": e["hook_type"],
-        "hook": e["hook"], "cliffhanger": e["open_question"], "why": e["why"], "spoiler": e["spoiler"],
+        "hook": e["hook"], "hook_summary": summary_of_hook, "cliffhanger": e["open_question"], "why": e["why"],
+        "why_source": e.get("why_source", "template"), "spoiler": e["spoiler"],
         "plan_reason": plan.reason(e), "hook_cue": [int(hook_ep), int(hook_id)], "end_cue": cut.end_ref,
         "viewer": view, "cut_notes": cut.notes, "next_beat": " / ".join(c.text for c in after),
         "next_beat_time": stamp(after[0].start) if after else None,
