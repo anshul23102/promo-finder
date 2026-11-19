@@ -129,7 +129,21 @@ def main():
                 "pulse": pulse.get(n, {}).get("points", []), "scored": n in pulse}
                for n, e in sorted(episodes.items())]
 
+    ev_path = args.run / "evaluation.json"
+    ev = json.loads(ev_path.read_text(encoding="utf-8")) if ev_path.is_file() else {}
+    ev_ab = ev.get("ablation_cold_viewer_pass", {})
+    quality = {   # numbers only: no script text, safe next to the rest of data.js
+        "violations": len(ev.get("rule_violations", [])), "promos": len(takes),
+        "writer": {k: ev.get("writer_cliffhangers", {}).get(k) for k in ("labels", "hit_last_10s")},
+        "coverage": ev.get("coverage", {}), "rejections": ev.get("rejections", {}),
+        "viewer": {"ai": ev_ab.get("ai_editor"), "rules": ev_ab.get("rules")},
+        "judge": {k: ev.get("judge", {}).get(k) for k in ("comparisons", "repeat_pair_agreement", "average_place_by_slot")},
+        "agreement": ev.get("review_agreement"),
+        "reviews": [{"id": r["id"], "kind": r["kind"], **{k: (ev_rev.get("all") or {}).get(k) for k in ("n", "keep", "trim", "pass")}}
+                    for r in reviews for ev_rev in [next((x for x in ev.get("reviews", []) if x.get("reviewer") == r["name"]), {})]],
+    }
     payload = {
+        "quality": quality,
         "id": hashlib.sha256(raw).hexdigest()[:10],
         "show": {"title": summary.get("show", "Untitled show"), "episodes": len(episodes), "cues": summary.get("cues"),
                  "finder": summary.get("finder", ""), "editor": summary.get("editor_model", ""), "judge": summary.get("judge_model", ""),

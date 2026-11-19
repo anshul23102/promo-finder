@@ -55,7 +55,7 @@ Tests: `python3 -m unittest discover -s tests`
 
 ## The cutting room (review UI)
 
-A local web app for reviewing a finished run: a vertical reel that plays the script as captions, a 3-second gate, a trim timeline that snaps to clean line breaks, a season strip, and a blind mode. Code lives in `ui-claude/`.
+A web app with five pages for a finished run: **Promos** (every promo with its segments, hook, cliffhanger, why it works and posting order; downloadable as CSV or JSON), **Review** (a vertical reel that plays the script as captions, a 3-second gate, a trim timeline that snaps to clean line breaks, keep/trim/pass, and a "Hide AI hints" mode for unbiased rating), **Season** (every episode at a glance), **Quality** (where the tool picks badly, measured) and **New show** (how to run it on another show). Code lives in `ui-claude/`.
 
 - **Try it now, no setup:** [live demo](https://anshul23102.github.io/promo-finder/) with a made-up show (`examples/the-last-edition/`, seven episodes). The demo data is synthetic; it contains no Kuku content.
 - **View your own run (stays on your machine):**

@@ -4,109 +4,173 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0A0A14">
-<title>Promo Finder: the cutting room</title>
+<title>Promo Finder</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2040%2040%22%3E%3Cdefs%3E%3CclipPath%20id%3D%22t%22%3E%3Cpath%20d%3D%22M0%200H40V18.6L0%2025.4Z%22/%3E%3C/clipPath%3E%3CclipPath%20id%3D%22b%22%3E%3Cpath%20d%3D%22M0%2031.6L40%2024.8V40H0Z%22/%3E%3C/clipPath%3E%3C/defs%3E%3Crect%20x%3D%228%22%20y%3D%221.5%22%20width%3D%2224%22%20height%3D%2237%22%20rx%3D%227%22%20fill%3D%22%23FF641C%22%20clip-path%3D%22url%28%23t%29%22/%3E%3Cg%20transform%3D%22translate%282.4%201.4%29%22%3E%3Crect%20x%3D%228%22%20y%3D%221.5%22%20width%3D%2224%22%20height%3D%2237%22%20rx%3D%227%22%20fill%3D%22%23FF641C%22%20opacity%3D%22.4%22%20clip-path%3D%22url%28%23b%29%22/%3E%3C/g%3E%3Cpath%20d%3D%22M16.6%207.2v10.4l9-5.2z%22%20fill%3D%22%23fff%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="logo" viewBox="0 0 40 40">
+    <defs>
+      <clipPath id="logoTop"><path d="M0 0H40V18.6L0 25.4Z"/></clipPath>
+      <clipPath id="logoBottom"><path d="M0 31.6L40 24.8V40H0Z"/></clipPath>
+    </defs>
+    <rect x="8" y="1.5" width="24" height="37" rx="7" fill="#FF641C" clip-path="url(#logoTop)"/>
+    <g transform="translate(2.4 1.4)"><rect x="8" y="1.5" width="24" height="37" rx="7" fill="#FF641C" opacity=".4" clip-path="url(#logoBottom)"/></g>
+    <path d="M16.6 7.2v10.4l9-5.2z" fill="#fff"/>
+  </symbol>
+</svg>
 
 <!-- Opening title card: the one orchestrated entrance. It splits like a clapperboard when you roll. -->
 <div id="intro" class="intro" role="dialog" aria-modal="true" aria-labelledby="introTitle">
   <div class="intro-half top"></div>
   <div class="intro-half bottom"></div>
   <div class="intro-blade" aria-hidden="true"></div>
+  <div class="intro-brand"><svg class="mark xl" aria-hidden="true"><use href="#logo"/></svg><span class="brand-name">Promo<b>Finder</b></span></div>
   <div class="intro-copy">
     <p class="intro-lede" id="introLede"></p>
     <h1 id="introTitle" class="intro-title"></h1>
     <p class="intro-sub" id="introSub"></p>
     <div class="intro-actions">
-      <button id="rollBtn" class="pill primary big" type="button">Roll the first take</button>
-      <button id="rollBlindBtn" class="pill ghost big" type="button">Review blind</button>
+      <button id="rollBtn" class="pill primary big" type="button">See the promos</button>
+      <button id="rollBlindBtn" class="pill ghost big" type="button">Start reviewing</button>
     </div>
   </div>
 </div>
 
-<div id="app" class="app" aria-hidden="true">
+<div id="app" class="app" data-view="promos" aria-hidden="true">
   <header class="bar">
-    <a class="brand" href="#" aria-label="Promo Finder">
-      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
-        <rect x="1" y="1" width="30" height="30" rx="9" fill="#E25506"/>
-        <path d="M12 9.5v13l10.5-6.5z" fill="#0A0A14"/>
-        <path d="M5 27 27 5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
-      </svg>
-      <span class="brand-name">Promo Finder</span>
+    <a class="brand" href="#/promos" aria-label="Promo Finder, home">
+      <svg class="mark" aria-hidden="true"><use href="#logo"/></svg>
+      <span class="brand-name">Promo<b>Finder</b></span>
     </a>
+    <nav class="nav" id="nav" aria-label="Pages">
+      <a href="#/promos" data-nav="promos">Promos</a>
+      <a href="#/review" data-nav="review">Review</a>
+      <a href="#/season" data-nav="season">Season</a>
+      <a href="#/quality" data-nav="quality">Quality</a>
+      <a href="#/new" data-nav="new">New show</a>
+    </nav>
     <p class="show" id="showTitle"></p>
     <p class="demo-pill" id="demoPill" hidden>Demo with a made-up show</p>
     <div class="bar-actions">
-      <div class="progress" id="progress" role="status" aria-live="polite"></div>
-      <button id="blindBtn" class="switch" type="button" aria-pressed="false" title="Hide every AI opinion and shuffle the takes (B)">
-        <span class="switch-dot" aria-hidden="true"></span>Blind mode
+      <div class="progress only-review" id="progress" role="status" aria-live="polite"></div>
+      <button id="blindBtn" class="switch only-review" type="button" aria-pressed="false" title="Hide what the AI thinks and shuffle the order, so your rating is your own (B)">
+        <span class="switch-dot" aria-hidden="true"></span>Hide AI hints
       </button>
-      <button id="exportBtn" class="pill primary" type="button">Export ratings</button>
-      <button id="helpBtn" class="icon-btn" type="button" aria-label="Keyboard shortcuts">?</button>
+      <button id="exportBtn" class="pill primary only-review" type="button">Export ratings</button>
+      <button id="helpBtn" class="icon-btn" type="button" aria-label="Help and keyboard shortcuts">?</button>
     </div>
   </header>
 
-  <section class="strip" aria-label="Episodes in the show">
-    <div class="strip-scroll" id="strip"></div>
-  </section>
+  <main class="views">
+    <section class="view" id="v-promos" aria-label="Promos"><div class="page" id="promosPage"></div></section>
 
-  <main class="room" id="room">
-    <aside class="feed" id="feed" aria-label="Takes to review"></aside>
+    <section class="view" id="v-review" aria-label="Review">
+      <section class="strip" aria-label="Episodes in the show"><div class="strip-scroll" id="strip"></div></section>
+      <div class="room" id="room">
+        <aside class="feed" id="feed" aria-label="Promos to review"></aside>
 
-    <section class="stage" aria-label="Player">
-      <div class="phone-wrap">
-        <div class="phone" id="phone">
-          <svg class="gate" viewBox="0 0 360 640" aria-hidden="true">
-            <rect class="gate-track" x="3" y="3" width="354" height="634" rx="46" pathLength="100"/>
-            <rect class="gate-arc" id="gateArc" x="3" y="3" width="354" height="634" rx="46" pathLength="100"/>
-          </svg>
-          <div class="screen" id="screen">
-            <div class="backdrop" aria-hidden="true"><i class="orb o1"></i><i class="orb o2"></i><i class="grain"></i><i class="vignette"></i></div>
-            <div class="hud">
-              <div class="hud-shot" id="shotTag"></div>
-              <div class="hud-gate" id="gateTag"></div>
-            </div>
-            <p class="narration" id="narr"></p>
-            <div class="subtitle" id="sub"><span class="who" id="subWho"></span><p class="line" id="subLine"></p></div>
-            <p class="sfx" id="sfx"></p>
-            <div class="cut" id="cutScreen" aria-live="polite">
-              <div class="cut-line"></div>
-              <p class="cut-kicker">The clip ends here</p>
-              <p class="cut-question" id="cutQuestion"></p>
-              <div class="cut-actions">
-                <button class="pill ghost" id="peekBtn" type="button">Peek at what happens next</button>
-                <button class="pill ghost" id="replayBtn" type="button">Replay</button>
+        <section class="stage" aria-label="Player">
+          <div class="phone-wrap">
+            <div class="phone" id="phone">
+              <svg class="gate" viewBox="0 0 360 640" aria-hidden="true">
+                <rect class="gate-track" x="3" y="3" width="354" height="634" rx="46" pathLength="100"/>
+                <rect class="gate-arc" id="gateArc" x="3" y="3" width="354" height="634" rx="46" pathLength="100"/>
+              </svg>
+              <div class="screen" id="screen">
+                <div class="backdrop" aria-hidden="true"><i class="orb o1"></i><i class="orb o2"></i><i class="grain"></i><i class="vignette"></i></div>
+                <div class="hud">
+                  <div class="hud-shot" id="shotTag"></div>
+                  <div class="hud-gate" id="gateTag"></div>
+                </div>
+                <p class="narration" id="narr"></p>
+                <div class="subtitle" id="sub"><span class="who" id="subWho"></span><p class="line" id="subLine"></p></div>
+                <p class="sfx" id="sfx"></p>
+                <div class="cut" id="cutScreen" aria-live="polite">
+                  <div class="cut-line"></div>
+                  <p class="cut-kicker">The clip ends here</p>
+                  <p class="cut-question" id="cutQuestion"></p>
+                  <div class="cut-actions">
+                    <button class="pill ghost" id="peekBtn" type="button">Peek at what happens next</button>
+                    <button class="pill ghost" id="replayBtn" type="button">Replay</button>
+                  </div>
+                  <p class="cut-peek" id="cutPeek" hidden></p>
+                </div>
               </div>
-              <p class="cut-peek" id="cutPeek" hidden></p>
             </div>
           </div>
-        </div>
-      </div>
 
-      <div class="timeline-card">
-        <div class="timeline-head">
-          <p class="timeline-title">Trim the cut</p>
-          <p class="timeline-hint" id="timelineHint">Drag In and Out. They land only on clean line breaks.</p>
-        </div>
-        <div class="timeline" id="timeline"></div>
-      </div>
-      <div class="transport" role="group" aria-label="Playback">
-        <button id="playBtn" class="icon-btn lg" type="button" aria-label="Play"></button>
-        <button id="restartBtn" class="icon-btn" type="button" aria-label="Restart (R)">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M20 6.5v11L10 12z" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>
-        </button>
-        <span class="clock" id="clock">00:00.0</span>
-        <span class="clock dim" id="clockTotal"></span>
-        <span class="spacer"></span>
-        <button id="speedBtn" class="chip" type="button" aria-label="Playback speed">1x</button>
-        <button id="theatreBtn" class="chip" type="button" aria-pressed="false" title="Hide everything but the reel (F)">Theatre</button>
-      </div>
+          <div class="timeline-card">
+            <div class="timeline-head">
+              <p class="timeline-title">Trim the cut</p>
+              <p class="timeline-hint" id="timelineHint">Drag In and Out. They land only on clean line breaks.</p>
+            </div>
+            <div class="timeline" id="timeline"></div>
+          </div>
+          <div class="transport" role="group" aria-label="Playback">
+            <button id="playBtn" class="icon-btn lg" type="button" aria-label="Play"></button>
+            <button id="restartBtn" class="icon-btn" type="button" aria-label="Restart (R)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M20 6.5v11L10 12z" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>
+            </button>
+            <span class="clock" id="clock">00:00.0</span>
+            <span class="clock dim" id="clockTotal"></span>
+            <span class="spacer"></span>
+            <button id="speedBtn" class="chip" type="button" aria-label="Playback speed">1x</button>
+            <button id="theatreBtn" class="chip" type="button" aria-pressed="false" title="Hide everything but the reel (F)">Theatre</button>
+          </div>
+        </section>
 
+        <aside class="slate" id="slate" aria-label="Verdict"></aside>
+      </div>
     </section>
 
-    <aside class="slate" id="slate" aria-label="Verdict"></aside>
+    <section class="view" id="v-season" aria-label="Season"><div class="page" id="seasonPage"></div></section>
+    <section class="view" id="v-quality" aria-label="Quality"><div class="page" id="qualityPage"></div></section>
+
+    <section class="view" id="v-new" aria-label="New show">
+      <div class="page">
+        <header class="page-head"><h1>Use it on a new show</h1>
+          <p class="lede">Any show whose screenplay files carry timed cues works unchanged. Nothing here is specific to one story.</p></header>
+
+        <div class="cards2">
+          <article class="card">
+            <h2>1. What goes in</h2>
+            <p>One text file per episode. Each cue is a label, a time range and the text:</p>
+<pre class="code">**MAYA (stunned):**
+Start: (00:02.29) | End: (00:05.17)
+"H. Calloway. Our publisher signed your death."</pre>
+            <p class="muted">Labels ACTION, CAMERA and SOUND FX are understood; any other label is a speaker. The episode number comes from the file name (<code>ep_3.txt</code>, <code>episode-003.txt</code>) or an <code>EPISODE NUMBER:</code> line. A logline and continuity notes help but are optional. Subtitle files (SRT, VTT) are not read yet.</p>
+          </article>
+          <article class="card">
+            <h2>2. Try it with no setup</h2>
+            <p>Open the <a href="https://promo-finder-ajx17.streamlit.app" target="_blank" rel="noopener">hosted app</a>, upload a ZIP or a few episode files, and run it in rules mode. No key, no AI.</p>
+            <p class="muted">Use the hosted app only with scripts you are free to share. For confidential scripts, run it on your own machine.</p>
+          </article>
+          <article class="card">
+            <h2>3. Run it on your machine</h2>
+<pre class="code">python3 -m promo path/to/scripts.zip \
+  --model groq:openai/gpt-oss-120b \
+  --judge groq:qwen/qwen3.8-27b --no-guide</pre>
+            <p class="muted">Swap the model with one flag (<code>gemini</code>, <code>groq</code>, <code>openrouter</code>, <code>ollama</code>, any OpenAI-compatible endpoint). <code>--model rules</code> needs no AI at all. Every answer is cached, so a re-run costs nothing.</p>
+          </article>
+          <article class="card">
+            <h2>4. See the result here</h2>
+<pre class="code">python3 ui-claude/serve.py \
+  --run private/runs/&lt;your-run&gt; \
+  --pack path/to/scripts.zip</pre>
+            <p class="muted">This builds this same interface for your show and serves it on your own computer only. Your scripts never leave it.</p>
+          </article>
+        </div>
+
+        <section class="card wide">
+          <h2>What you get back</h2>
+          <p>For every promo: the episode and each segment's start and end in order, the hook, the cliffhanger, one line on why it works, and its place in the posting order. As files: <code>promos.csv</code>, <code>promos.json</code>, <code>posting_plan.md</code>, an editing list (<code>cutlist.edl</code>), a quality report and every raw model reply.</p>
+        </section>
+      </div>
+    </section>
   </main>
 
   <p class="toast" id="toast" role="status" aria-live="polite"></p>
@@ -114,14 +178,17 @@
 
 <dialog id="help" class="help">
   <form method="dialog">
-    <h2>Keyboard</h2>
+    <h2>How this works</h2>
+    <p class="help-p"><b>Promos</b> is the answer: every promo the tool found, in the order to post them, with the hook, the cliffhanger and why it works. <b>Review</b> lets you watch one as the script plays, move its start and end, and mark <b>Keep</b> (post it), <b>Trim</b> (good, but move the cut points) or <b>Pass</b>.</p>
+    <p class="help-p"><b>Hide AI hints</b> removes everything the AI thinks (rank, summaries, scores) and shuffles the order, so your rating is your own judgment. Use it when you want to check the tool against a person.</p>
+    <h3>Keyboard (Review page)</h3>
     <dl>
       <div><dt>Space</dt><dd>Play or pause</dd></div>
-      <div><dt>Left, Right</dt><dd>Previous or next take</dd></div>
+      <div><dt>Left, Right</dt><dd>Previous or next promo</dd></div>
       <div><dt>K, T, P</dt><dd>Keep, trim or pass, then move on</dd></div>
-      <div><dt>[ and ]</dt><dd>Set the in or out point at the playhead</dd></div>
-      <div><dt>R</dt><dd>Restart the take</dd></div>
-      <div><dt>B</dt><dd>Blind mode</dd></div>
+      <div><dt>[ and ]</dt><dd>Set the start or end at the playhead</dd></div>
+      <div><dt>R</dt><dd>Restart</dd></div>
+      <div><dt>B</dt><dd>Hide AI hints</dd></div>
       <div><dt>F</dt><dd>Theatre mode</dd></div>
     </dl>
     <button class="pill primary" value="close">Done</button>
