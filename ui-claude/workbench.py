@@ -85,8 +85,11 @@ def run_job(jid, engine, episodes, title):
         if b.returncode != 0:
             st.update(status="error", message="Could not build the results page: " + (b.stderr or b.stdout)[-400:])
             return
-        st.update(status="done", url=f"/view/{jid}/")
-        (d / "meta.json").write_text(json.dumps({"title": title, "engine": engine, "when": int(time.time())}))
+        summary = json.loads((out / "run_summary.json").read_text()) if (out / "run_summary.json").is_file() else {}
+        st.update(status="done", url=f"/view/{jid}/", warnings=list(summary.get("warnings") or []), promos=summary.get("passed"),
+                  candidates=summary.get("candidates"), episodes=summary.get("episodes"))
+        (d / "meta.json").write_text(json.dumps({"title": title, "engine": engine, "when": int(time.time()),
+                                                 "warnings": len(summary.get("warnings") or []), "promos": summary.get("passed")}))
     except Exception as exc:  # noqa: BLE001 - shown to the user
         st.update(status="error", message=str(exc)[:600])
 

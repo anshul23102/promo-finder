@@ -223,6 +223,14 @@ class RuleCheckTest(unittest.TestCase):
         self.assertIn("spoken line", problems)
         self.assertIn("first 3 seconds", problems)
 
+    def test_flags_an_ending_between_two_lines_of_one_sentence(self):
+        ep = episode()
+        at = next(i for i, c in enumerate(ep.cues) if c.text == '"Line 7?"')
+        old = ep.cues[at]
+        ep.cues[at] = Cue(old.id, old.start, old.end, "dialogue", "TOM", '"...and it is you."', old.scene)   # the same speaker carries the sentence on
+        promo = {"id": "P3", "segments": [{"episode": 1, "start_cs": 500, "end_cs": 3500}], "hook_cue": [1, 4]}
+        self.assertIn("finishes the sentence", " ".join(check_rules([promo], {1: ep})))
+
 
 class ResilientRunTest(unittest.TestCase):
     def test_provider_outage_exports_review_outcomes_without_viewer_passes(self):

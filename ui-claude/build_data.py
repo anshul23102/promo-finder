@@ -142,7 +142,28 @@ def main():
         "reviews": [{"id": r["id"], "kind": r["kind"], **{k: (ev_rev.get("all") or {}).get(k) for k in ("n", "keep", "trim", "pass")}}
                     for r in reviews for ev_rev in [next((x for x in ev.get("reviews", []) if x.get("reviewer") == r["name"]), {})]],
     }
+    cov_path = args.run / "coverage.json"          # the per-episode ledger: the real source of "why does this episode have no promo"
+    coverage = []
+    for c in (json.loads(cov_path.read_text(encoding="utf-8")) if cov_path.is_file() else []):
+        cut = c.get("cut")
+        for sg in (cut or {}).get("segments", []):      # review candidates carry mm:ss.xx text only; the page needs centiseconds
+            for k in ("start", "end"):
+                if sg.get(k + "_cs") is None:
+                    m, sec = str(sg[k]).split(":")
+                    sg[k + "_cs"] = round((int(m) * 60 + float(sec)) * 100)
+        coverage.append({"episode": c["episode"], "status": c.get("status", ""), "reason": c.get("reason", ""),
+                         "cut": {"segments": [{k: sg.get(k) for k in ("episode", "start", "end", "start_cs", "end_cs", "duration_s")} for sg in cut["segments"]],
+                                 "opening": cut.get("opening", ""), "ending": cut.get("ending", "")} if cut else None})
+    viewed = sum((v or {}).get("viewed", 0) for v in ev_ab.values()) if ev_ab else None
+    ai_run = summary.get("editor_model", "rules") != "rules"
+    run = {   # what happened in this run, for the header of every page
+        "ai": ai_run, "finder": summary.get("finder", ""), "pack": len(episodes), "requested": summary.get("episodes"),
+        "scored": len(pulse) if ai_run and summary.get("finder") == "beats" else None,
+        "candidates": summary.get("candidates"), "judged": viewed if ai_run else None, "shortlisted": summary.get("passed", len(takes)),
+        "warnings": list(summary.get("warnings") or []),
+    }
     payload = {
+        "run": run, "coverage": coverage,
         "quality": quality,
         "id": hashlib.sha256(raw).hexdigest()[:10],
         "show": {"title": summary.get("show", "Untitled show"), "episodes": len(episodes), "cues": summary.get("cues"),

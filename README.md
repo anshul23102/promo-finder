@@ -27,16 +27,29 @@ An earlier version asked one model to pick whole promos (`--finder editor`). It 
 
 Python 3.11+. The pipeline itself has no dependencies.
 
+**Start here (safe, no key, no AI, nothing leaves your machine):**
+
 ```bash
-cp .env.example .env          # add a free GEMINI_API_KEY from https://aistudio.google.com/apikey
-python3 -m promo path/to/scripts.zip --model gemini --judge "gemini:gemma-4-26b-a4b-it|gemini-3.1-flash-lite"
-python3 -m promo path/to/scripts.zip --model groq:openai/gpt-oss-120b --judge groq:qwen/qwen3.8-27b --no-guide \
-    --episodes 1-12                                              # Groq free plan (switch on Zero Data Retention first)
-python3 -m promo path/to/scripts.zip --model rules            # no AI: the baseline
-python3 -m promo examples/last-edition --model ollama:qwen3:4b  # fully offline: works for beat scoring, slow on a laptop
+python3 -m promo examples/the-last-edition --model rules      # the made-up demo show: finds a timing-checked cut per episode
+python3 ui-claude/workbench.py                                # or drop episode files into a local page and get the results pages
 ```
 
-Use the original examples when testing the unpaid Gemini API. Its terms say not to submit confidential information. For a Kuku pack run, use local Ollama or an endpoint approved for that data. [Gemini API terms](https://ai.google.dev/gemini-api/terms)
+**Real or confidential scripts** (for example a Kuku pack): use a backend approved for that data: a local model, an endpoint Kuku supplies, or Groq with Zero Data Retention switched on in its console.
+
+```bash
+python3 -m promo path/to/scripts.zip --model rules            # no AI: the reproducible baseline
+python3 -m promo path/to/scripts.zip --model ollama:qwen3:4b --no-guide   # fully offline: works for beat scoring, slow on a laptop
+python3 -m promo path/to/scripts.zip --model openai-compatible:<model> --judge openai-compatible:<other-model>   # with PROMO_BASE_URL and PROMO_API_KEY
+python3 -m promo path/to/scripts.zip --model groq:openai/gpt-oss-120b --judge groq:qwen/qwen3.8-27b --no-guide \
+    --episodes 1-12                                              # Groq free plan (switch on Zero Data Retention first)
+```
+
+**Hosted free models on made-up or public scripts only.** Google's unpaid Gemini tier says not to submit confidential information ([terms](https://ai.google.dev/gemini-api/terms)), so use it only on `examples/`:
+
+```bash
+cp .env.example .env          # add a free GEMINI_API_KEY from https://aistudio.google.com/apikey
+python3 -m promo examples/the-last-edition --model gemini --judge "gemini:gemma-4-26b-a4b-it|gemini-3.1-flash-lite"
+```
 
 Swap models with one flag (`a|b` is a fallback chain; an overloaded model is skipped for 5 minutes): `--model groq`, `--model openrouter:<model>`, `--model openai:<model>`, or any OpenAI-compatible endpoint with `--model openai-compatible:<model>` plus `PROMO_BASE_URL` and `PROMO_API_KEY`. Recovery tries alternate cuts for episodes with no passing pick. Each run includes a per-episode coverage ledger and a review candidate where a valid alternate exists. Use `--no-recover` to skip the extra model calls or `--rounds 0` to rank by the viewer rubric without the tournament. On Groq's free plan each model gets 8K tokens a minute and 200K a day; one episode costs about 7.5K tokens to score, so run about 25 episodes a day (`--episodes`) and repeat: cached episodes cost nothing. The client paces itself, and stops with a clear message instead of sleeping when a daily cap is hit. Every model answer is cached, so a re-run after a crash or rate limit resumes for free.
 

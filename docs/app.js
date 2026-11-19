@@ -27,6 +27,11 @@ const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } ca
 let saved = read(KEY);                       // { takeId: { d: 'keep'|'trim'|'pass'|null, in, out } }
 const ui = Object.assign({ blind: false }, read(KEY + ':ui'));
 const persist = () => write(KEY, saved);
+const EMPTY = !D.takes.length;                                    // a strict judge, or a provider that stopped, can leave zero promos
+const RUN = D.run || {};
+const NOAI = RUN.ai === false;                                    // timing rules only: candidates for an editor, not judged promos
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const COV = new Map((D.coverage || []).map(c => [c.episode, c]));   // the per-episode ledger: the real source of each episode's status
 
 /* ---------- order: AI plan order, or a seeded shuffle in blind mode ---------- */
 const PLAN_ORDER = ['post_first', 'library', 'hold_back', 'alternate'];
@@ -370,7 +375,7 @@ function wire() {
   E.exportBtn.addEventListener('click', exportCsv);
   E.helpBtn.addEventListener('click', () => E.help.showModal());
   document.addEventListener('keydown', ev => {
-    if (E.help.open || ev.metaKey || ev.ctrlKey || ev.altKey || !E.intro.classList.contains('gone')) return;
+    if (EMPTY || E.help.open || ev.metaKey || ev.ctrlKey || ev.altKey || !E.intro.classList.contains('gone')) return;
     if (view === 'promos') { const k0 = ev.key; if (k0 === 'Escape') closeDrawer(); else if (drawerOpen && (k0 === 'ArrowRight' || k0 === 'ArrowDown')) { ev.preventDefault(); stepPromo(1); } else if (drawerOpen && (k0 === 'ArrowLeft' || k0 === 'ArrowUp')) { ev.preventDefault(); stepPromo(-1); } return; }
     if (view !== 'review') return;
     if (ev.target.closest && ev.target.closest('.tl-handle') && (ev.key === 'ArrowUp' || ev.key === 'ArrowDown')) return;
@@ -408,6 +413,30 @@ const range = (sg, tr) => `${fmt(tr ? tr.in : sg.start)} to ${fmt(tr ? tr.out : 
 let selPromo = null, drawerOpen = false, reelT = 0, reelI = 0;
 const flt = { ep: 0, mode: 'posters' };
 const clearReel = () => { clearTimeout(reelT); reelT = 0; };
+
+/* ---------- what happened in this run, and cuts that were never judged ---------- */
+function runStrip() {
+  const r = RUN, w = r.warnings || [], items = [['Episodes in this run', `${r.requested ?? D.show.episodes} of ${r.pack ?? D.show.episodes}`]];
+  if (r.ai) { items.push(['Scored by AI', r.scored != null ? String(r.scored) : 'n/a']); items.push(['Cuts judged', `${r.judged ?? 0} of ${r.candidates ?? 0}`]); }
+  else items.push(['AI used', 'none, timing rules only']);
+  items.push(['Shortlisted', String(r.shortlisted ?? D.takes.length)]);
+  items.push(['Provider', r.ai ? (w.length ? 'interrupted' : 'no interruption') : 'not used']);
+  return `<ul class="runstrip" aria-label="What happened in this run">${items.map(([a, b]) => `<li class="${a === 'Provider' && w.length ? 'warn' : ''}"><span>${esc(a)}</span><b>${esc(b)}</b></li>`).join('')}</ul>`;
+}
+function runBanner() {
+  const w = RUN.warnings || [], out = [];
+  if (w.length) out.push(`<div class="banner warn" role="status"><b>This run did not finish cleanly.</b><ul>${w.map(x => `<li>${esc(x)}</li>`).join('')}</ul><p>Cuts that were not judged are marked "Review needed". Run it again later or pick another engine: finished work is cached, so repeating costs nothing.</p></div>`);
+  if (EMPTY) out.push(`<div class="banner" role="status"><b>No promo passed the checks in this run.</b><p>${w.length ? 'The run stopped early, so the judge never saw the candidates.' : 'The judge, or the rules, rejected every candidate.'} The timing-checked cuts further down are material for an editor to review. Nobody has judged them as promos.</p></div>`);
+  return out.join('');
+}
+function candidatesHtml() {
+  const list = (D.coverage || []).filter(c => c.cut && c.status !== 'Viewer passed' && c.status !== 'Timing checked');
+  if (!list.length) return '';
+  return `<section class="rail-band cand-band"><div class="rail-head"><h2>Cuts for an editor to review</h2><span class="count">${list.length}</span><p>Timing-checked (20 to 60 seconds, cut on clean line breaks) but not judged as promos.</p></div>
+    <div class="cand-grid">${list.map(c => `<article class="cand"><header><b>Episode ${c.episode}</b><span class="tag warn">${esc(c.status)}</span></header>
+      <p class="tc">${c.cut.segments.map(sg => `${esc(sg.start)} to ${esc(sg.end)}`).join(' + ')}</p>
+      <dl><dt>Opens</dt><dd>${esc(c.cut.opening)}</dd><dt>Ends</dt><dd>${esc(c.cut.ending)}</dd></dl><p class="muted">${esc(c.reason)}</p></article>`).join('')}</div></section>`;
+}
 
 /* ---------- promos: reel hero, poster rails, ledger, detail drawer ---------- */
 function posterHtml(tk) {
@@ -459,45 +488,56 @@ function renderPromos() {
   const proof = [
     qv.violations != null ? [qv.violations, 'rule breaks across all clips'] : null,
     v.ai && v.ai.viewed ? [pct(v.ai.passed, v.ai.viewed), 'followed by a cold viewer'] : null,
-    [`${eps} of ${D.show.episodes}`, 'episodes have a promo'],
+    [`${eps} of ${D.show.episodes}`, NOAI ? 'episodes have a candidate' : 'episodes have a promo'],
   ].filter(Boolean);
   const epsWith = [...new Set(all.map(t => t.episode))].sort((a, b) => a - b);
   const shown = all.filter(t => !flt.ep || t.episode === flt.ep);
   const groups = PLAN_ORDER.map(g => ({ g, list: shown.filter(t => t.plan === g) })).filter(x => x.list.length);
-  const body = !shown.length ? '<p class="empty band">No promos for that episode.</p>'
+  const body = EMPTY ? '' : !shown.length ? '<p class="empty band">No promos for that episode.</p>'
     : flt.mode === 'list' ? ledgerHtml(shown)
     : groups.map(({ g, list }) => `<section class="rail-band ${g === 'post_first' ? 'first' : ''}"><div class="rail-head"><h2>${PLAN_NAME[g]}</h2><span class="count">${list.length}</span><p>${PLAN_NOTE[g]}</p></div><div class="rail ${g === 'post_first' ? 'big' : ''}">${list.map(posterHtml).join('')}</div></section>`).join('');
+  const off = EMPTY ? ' disabled' : '';
+  const stage = EMPTY
+    ? `<dl class="stat-stack"><div><dt>Candidates found</dt><dd>${RUN.candidates ?? 0}</dd></div><div><dt>Judged</dt><dd>${RUN.ai ? (RUN.judged ?? 0) : 'n/a'}</dd></div><div><dt>Shortlisted</dt><dd class="bad">0</dd></div></dl>`
+    : `<div class="reel-stage"><button class="reel ph0" id="reelCard" type="button"><span id="reelLabel"></span></button>
+        <div class="reel-dots" role="group" aria-label="Preview another promo">${top.map(t => `<button type="button" aria-label="Preview promo ${t.rank}"></button>`).join('')}</div>
+        <p class="reel-note">Preview of the top ${top.length}. Watch one hook, cut, then end on the cliffhanger. Click to open it.</p></div>`;
   E.promosPage.innerHTML = `
     <section class="hero-band">
       <div class="hero-copy">
-        <h1>${n} promos, ready to post</h1>
-        <p class="lede">Found in ${eps} of ${D.show.episodes} episodes of ${esc(D.show.title)}. Start with the first, then work down. Each one opens on a hook and cuts off on a cliffhanger.</p>
-        <div class="head-actions"><button class="pill primary big" id="dlCsv" type="button">Download results (CSV)</button><button class="pill big" id="dlJson" type="button">JSON</button></div>
-        <ul class="proof">${proof.map(([a, b]) => `<li><b>${esc(a)}</b><span>${esc(b)}</span></li>`).join('')}</ul>
-        <details class="how"><summary>How the order was decided</summary>
+        <h1>${EMPTY ? 'No promo passed the checks' : NOAI ? `${plural(n, 'candidate cut', 'candidate cuts')} to review` : `${plural(n, 'promo', 'promos')}, ready to post`}</h1>
+        <p class="lede">${EMPTY ? `Nothing from ${esc(D.show.title)} reached the shortlist in this run. What was tried, and what is left for an editor, is below.` : NOAI ? `Timing-checked cuts from ${eps} of ${D.show.episodes} episodes of ${esc(D.show.title)}, found by rules with no AI. They are material for an editor to review, ordered by a simple word-based score. Nobody has judged them as promos.` : `Found in ${eps} of ${D.show.episodes} episodes of ${esc(D.show.title)}. Start with the first, then work down. Each one opens on a hook and cuts off on a cliffhanger.`}</p>
+        ${runStrip()}
+        <div class="export-grid">
+          <div class="export-box"><b>Original results</b><span>${EMPTY ? 'Nothing to export: no promo passed the checks.' : 'As the tool found them. Never changed by your trims or ratings.'}</span><div><button class="pill primary" id="dlCsv" type="button"${off}>CSV</button><button class="pill" id="dlJson" type="button"${off}>JSON</button></div></div>
+          <div class="export-box"><b>Editor handoff</b><span id="hoNote">${EMPTY ? 'Nothing to hand off: no promo passed the checks.' : esc(handoffNote())}</span><div><button class="pill primary" id="hoCsv" type="button"${off}>CSV</button><button class="pill" id="hoJson" type="button"${off}>JSON</button></div></div>
+        </div>
+        ${EMPTY ? '' : `<ul class="proof">${proof.map(([a, b]) => `<li><b>${esc(a)}</b><span>${esc(b)}</span></li>`).join('')}</ul>`}
+        ${EMPTY || NOAI ? '' : `<details class="how"><summary>How the order was decided</summary>
           <ul>
             <li><b>The strongest from each episode goes first</b>, earliest episodes first, because a new viewer lands on episode 1.</li>
             <li><b>Clips a stranger could not follow are dropped</b>: an AI that sees only the clip must say what is happening and what it is waiting for.</li>
             <li><b>Big twists are held back</b> so a promo does not spoil the show.</li>
             <li><b>Overlapping cuts become alternates</b> instead of repeating the same moment twice.</li>
-          </ul></details>
+          </ul></details>`}
       </div>
-      <div class="reel-stage"><button class="reel ph0" id="reelCard" type="button"><span id="reelLabel"></span></button>
-        <div class="reel-dots" role="group" aria-label="Preview another promo">${top.map(t => `<button type="button" aria-label="Preview promo ${t.rank}"></button>`).join('')}</div>
-        <p class="reel-note">Preview of the top ${top.length}. Watch one hook, cut, then end on the cliffhanger. Click to open it.</p></div>
+      ${stage}
     </section>
-    <section class="toolbar" aria-label="Layout and filter">
+    ${runBanner()}
+    <section class="toolbar" aria-label="Layout and filter"${EMPTY ? ' hidden' : ''}>
       <div class="seg-toggle" role="group" aria-label="Layout"><button type="button" data-mode="posters" aria-pressed="${flt.mode === 'posters'}">Posters</button><button type="button" data-mode="list" aria-pressed="${flt.mode === 'list'}">List</button></div>
       <div class="ep-filter" role="group" aria-label="Filter by episode"><button class="chip" type="button" data-fep="0" aria-pressed="${!flt.ep}">All episodes</button>${epsWith.map(e => `<button class="chip" type="button" data-fep="${e}" aria-pressed="${flt.ep === e}">Ep ${e}</button>`).join('')}</div>
     </section>
-    <div id="deckBody">${body}</div>
+    <div id="deckBody">${body}${candidatesHtml()}</div>
     <div class="scrim" id="scrim"></div>
     <aside class="drawer" id="drawer" aria-live="polite" aria-label="Promo details"></aside>`;
-  reelI = 0; playReel(top);
+  reelI = 0; if (top.length) playReel(top);
   E.promosPage.querySelectorAll('.reel-dots button').forEach((b, k) => { b.addEventListener('click', () => { reelI = k; playReel(top); }); });
-  const stage = $('.reel-stage', E.promosPage);
-  stage.addEventListener('mouseenter', () => { if (!reduced) clearReel(); });
-  stage.addEventListener('mouseleave', () => { if (!reduced && view === 'promos' && !drawerOpen) { reelI++; playReel(top); } });
+  const reelBox = $('.reel-stage', E.promosPage);
+  if (reelBox) {
+    reelBox.addEventListener('mouseenter', () => { if (!reduced) clearReel(); });
+    reelBox.addEventListener('mouseleave', () => { if (!reduced && view === 'promos' && !drawerOpen) { reelI++; playReel(top); } });
+  }
   E.promosPage.querySelectorAll('[data-sel]').forEach(b => {
     b.addEventListener('click', () => pickPromo(b.dataset.sel, true));
     if (b.tagName === 'TR') b.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pickPromo(b.dataset.sel, true); } });
@@ -506,8 +546,10 @@ function renderPromos() {
   E.promosPage.querySelectorAll('[data-fep]').forEach(b => b.addEventListener('click', () => { flt.ep = +b.dataset.fep; renderPromos(); }));
   $('#dlCsv', E.promosPage).addEventListener('click', () => downloadResults('csv'));
   $('#dlJson', E.promosPage).addEventListener('click', () => downloadResults('json'));
+  $('#hoCsv', E.promosPage).addEventListener('click', () => downloadHandoff('csv'));
+  $('#hoJson', E.promosPage).addEventListener('click', () => downloadHandoff('json'));
   $('#scrim', E.promosPage).addEventListener('click', closeDrawer);
-  renderDrawer();
+  if (!EMPTY) renderDrawer();
 }
 function pickPromo(id, open) {
   selPromo = id; if (open) drawerOpen = true;
@@ -522,12 +564,12 @@ function renderDrawer() {
   if (!drawerOpen) return;
   const s = saved[tk.id], t = trimFor(tk), edited = isTrimmed(tk), all = sortedTakes(), i = all.indexOf(tk);
   const seg = tk.segments.map((sg, k) => `<li><span class="seg-n">${tk.segments.length > 1 ? 'Segment ' + (k + 1) : 'Clip'}</span><b>Ep ${sg.episode}</b><span class="tc">${fmt(k === 0 ? t.in : sg.start)}</span><span class="arrow">to</span><span class="tc">${fmt(k === 0 ? t.out : sg.end)}</span></li>`).join('');
-  const plain = `Ep ${tk.episode}: ${segText(tk)}. Hook: ${tk.ai.hook} Cliffhanger: ${tk.ai.cliff} Why: ${tk.ai.why || ''}`;
+  const plain = `Ep ${tk.episode}: ${segText(tk)}. Hook: ${tk.ai.hook} Cliffhanger: ${tk.ai.cliff} Why: ${tk.ai.why || ''}${edited ? ' (You moved the cut, so re-check the hook, cliffhanger and why.)' : ''}`;
   const cv = tk.ai.viewer || {};
   el.innerHTML = `<button class="drawer-close icon-btn" id="tkClose" type="button" aria-label="Close details (Esc)">&times;</button>
     <div class="tk-head"><span class="tk-rank">${tk.rank}</span><div><p class="tk-eyebrow">${esc(PLAN_NAME[tk.plan])}</p><h2>Episode ${tk.episode}, ${durOf(tk).toFixed(1)} seconds</h2></div></div>
     <ul class="segs">${seg}</ul>
-    <p class="tk-note">${tk.segments.length > 1 ? 'Play the segments in this order.' : 'One continuous stretch.'}${edited ? ' <span class="tag warn">you moved the cut</span>' : ''}${s && s.d ? ` <span class="tag ${s.d === 'keep' ? 'good' : s.d === 'trim' ? 'warn' : 'bad'}">you said ${s.d}</span>` : ''}</p>
+    <p class="tk-note">${tk.segments.length > 1 ? 'Play the segments in this order.' : 'One continuous stretch.'}${edited ? ' <span class="tag warn">you moved the cut</span>' : ''}${edited && trimProblems(tk, t).length ? ` <span class="tag bad">your trim breaks a rule: ${esc(trimProblems(tk, t).join('; '))}. The handoff keeps the original cut.</span>` : ''}${s && s.d ? ` <span class="tag ${s.d === 'keep' ? 'good' : s.d === 'trim' ? 'warn' : 'bad'}">you said ${s.d}</span>` : ''}</p>
     <dl class="tk-facts">
       <div><dt>Hook${tk.ai.hookType ? ` <small>${esc(tk.ai.hookType.replace(/_/g, ' '))}</small>` : ''}</dt><dd>${esc(tk.ai.hook)}</dd></div>
       ${tk.ai.opening ? `<div><dt>First 3 seconds</dt><dd>${esc(unq(tk.ai.opening))}</dd></div>` : ''}
@@ -563,18 +605,25 @@ function renderSeason() {
     const brackets = takes.flatMap(tk => tk.segments.filter(sg => sg.episode === ep.n).map(sg => {
       const l = (sg.start / dur * 100).toFixed(2), w = Math.max(1.2, (sg.end - sg.start) / dur * 100).toFixed(2);
       return `<button class="br" type="button" data-take="${esc(tk.id)}" style="left:${l}%;width:${w}%" aria-label="Promo ${tk.rank}, ${mmss(sg.start)} to ${mmss(sg.end)}"><i>${tk.rank}</i></button>`; })).join('');
-    const state = takes.length ? `<span class="tag good">${takes.length} promo${takes.length > 1 ? 's' : ''}</span>` : ep.scored ? '<span class="tag warn">scored, none passed</span>' : '<span class="tag">not run</span>';
+    const c = COV.get(ep.n);
+    const state = takes.length ? `<span class="tag good">${NOAI ? plural(takes.length, 'candidate', 'candidates') : plural(takes.length, 'promo', 'promos')}</span>`
+      : !c ? '<span class="tag">not in this run</span>'
+      : c.status === 'Review needed' ? '<span class="tag warn">review needed</span>'
+      : c.status === 'No eligible cut' ? '<span class="tag bad">no eligible cut</span>' : `<span class="tag">${esc(c.status.toLowerCase())}</span>`;
+    const cand = !takes.length && c && c.cut ? c.cut.segments.map(sg => `<span class="br unjudged" title="A timing-checked cut that was not judged: ${esc(sg.start)} to ${esc(sg.end)}" style="left:${(sg.start_cs / dur * 100).toFixed(2)}%;width:${Math.max(1.2, (sg.end_cs - sg.start_cs) / dur * 100).toFixed(2)}%"></span>`).join('') : '';
+    const why = !takes.length && c ? `<p class="ep-why">${esc(c.reason)}${c.cut ? ' A timing-checked cut for review is drawn dashed.' : ''}</p>` : '';
     return `<li class="eprow ${takes.length ? 'has' : 'gap'}"><div class="ep-id"><b>${String(ep.n).padStart(2, '0')}</b><span>${mmss(ep.duration)}</span></div>
-      <div class="ep-body"><p class="ep-log">${esc(ep.logline || 'No logline in the script.')}</p><div class="ep-track">${ep.scored ? trackSvg(ep) : ''}<span class="ep-base"></span>${brackets}</div></div>
+      <div class="ep-body"><p class="ep-log">${esc(ep.logline || 'No logline in the script.')}</p>${why}<div class="ep-track">${ep.scored ? trackSvg(ep) : ''}<span class="ep-base"></span>${brackets}${cand}</div></div>
       <div class="ep-side">${state}${takes[0] ? `<button class="pill" type="button" data-take="${esc(takes[0].id)}">Open</button>` : ''}</div></li>`;
   };
   E.seasonPage.innerHTML = `
     <section class="hero-band" data-mark="${D.episodes.length}">
       <div class="hero-copy"><h1>Every episode at a glance</h1>
         <p class="lede">Each row is one episode, start to end. The orange and gold lines show where the AI saw a good place to open a clip or end one. The boxes are the promos that were cut, placed where they sit in the episode.</p></div>
-      <dl class="stat-stack"><div><dt>Episodes with a promo</dt><dd>${covered}<small> of ${D.episodes.length}</small></dd></div><div><dt>Promos in total</dt><dd>${D.takes.length}</dd></div><div><dt>Episodes without one</dt><dd class="${gaps ? 'warn' : ''}">${gaps}</dd></div></dl>
+      <dl class="stat-stack"><div><dt>${NOAI ? 'Episodes with a candidate' : 'Episodes with a promo'}</dt><dd>${covered}<small> of ${D.episodes.length}</small></dd></div><div><dt>${NOAI ? 'Candidates in total' : 'Promos in total'}</dt><dd>${D.takes.length}</dd></div><div><dt>Episodes without one</dt><dd class="${gaps ? 'warn' : ''}">${gaps}</dd></div></dl>
     </section>
-    <section class="legend"><span><i class="lg o"></i>Good place to open</span><span><i class="lg g"></i>Good place to end</span><span><i class="lg b"></i>A promo, numbered by rank</span><span class="muted">Taller lines are stronger.</span></section>
+    ${runBanner()}
+    <section class="legend"><span><i class="lg o"></i>Good place to open</span><span><i class="lg g"></i>Good place to end</span><span><i class="lg b"></i>A promo, numbered by rank</span><span><i class="lg d"></i>A cut nobody has judged</span><span class="muted">Taller lines are stronger.</span></section>
     <ol class="eprows">${D.episodes.map(row).join('')}</ol>`;
   E.seasonPage.querySelectorAll('[data-take]').forEach(b => b.addEventListener('click', () => showPromo(b.dataset.take)));
 }
@@ -596,9 +645,10 @@ function renderQuality() {
         <p class="lede">Measured on this run, not promised. Every check says what it tests, what the number is, and what it cannot prove.</p></div>
       <dl class="stat-stack"><div><dt>Rules broken</dt><dd class="${q.violations ? 'bad' : 'good'}">${q.violations ?? 'n/a'}</dd></div><div><dt>Promos checked</dt><dd>${q.promos ?? D.takes.length}</dd></div>${v.ai ? `<div><dt>Cold viewer followed</dt><dd>${pct(v.ai.passed, v.ai.viewed)}</dd></div>` : ''}</dl>
     </section>
+    ${runBanner()}
     <section class="q-grid">
-      <article class="qc a"><h2>Hard rules</h2><p class="qbig ${q.violations ? 'bad' : 'good'}">${q.violations ?? 'n/a'} broken</p>
-        <p>Across ${q.promos ?? D.takes.length} promos: 20 to 60 seconds, something in the first 3 seconds, no cut through a spoken line, no opening on a half-sentence. Code re-checks every promo, so this should be zero.</p><p class="cant">Cannot prove the promo is good, only that it is legal.</p></article>
+      <article class="qc a"><h2>Hard rules</h2>${EMPTY ? '<p class="qbig">n/a</p><p>There are no promos to check. Nothing in this run has been judged, so there is no rule result to report.</p>' : `<p class="qbig ${q.violations ? 'bad' : 'good'}">${q.violations ?? 'n/a'} broken</p>
+        <p>Across ${q.promos ?? D.takes.length} promos: 20 to 60 seconds, something in the first 3 seconds, no cut through a spoken line, no opening on a half-sentence. Code re-checks every promo, so this should be zero.</p>`}<p class="cant">Cannot prove the promo is good, only that it is legal.</p></article>
       <article class="qc b"><h2>Does it find the writers' own cliffhangers?</h2><p class="qbig">${w.labels ? `${w.hit_last_10s} of ${w.labels}` : 'n/a'}</p>
         ${w.labels ? meter('Promos ending within 10 s of one', w.hit_last_10s, w.labels) : ''}
         <p>The scripts' continuity notes flag some episode-ending cliffhangers. This counts promos that end within 10 seconds of one.</p><p class="cant">Cannot prove a viewer would stop scrolling.</p></article>
@@ -631,24 +681,63 @@ function renderQuality() {
       </ul></section>`;
 }
 
-/* ---------- results download (the deliverable) ---------- */
-function downloadResults(kind) {
-  const rows = D.takes.slice().sort((a, b) => a.rank - b.rank).map(tk => ({
-    rank: tk.rank, post_slot: PLAN_NAME[tk.plan], episode: tk.episode,
-    segments_in_order: segText(tk), duration_seconds: +durOf(tk).toFixed(1),
-    hook: tk.ai.hook, cliffhanger: tk.ai.cliff, why_it_works: tk.ai.why, why_this_slot: tk.ai.planReason,
-    spoiler: tk.ai.spoiler || 'none', moved_by_you: isTrimmed(tk) ? 'yes' : 'no',
-  }));
-  let blob, name = `promos-${D.id}.${kind}`;
-  if (kind === 'json') blob = new Blob([JSON.stringify({ show: D.show.title, promos: rows }, null, 2)], { type: 'application/json' });
-  else {
-    const cell = v => { let t = String(v ?? ''); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return '"' + t.replace(/"/g, '""') + '"'; };
-    const cols = Object.keys(rows[0]);
-    blob = new Blob([[cols.join(','), ...rows.map(r => cols.map(c => cell(r[c])).join(','))].join('\r\n')], { type: 'text/csv;charset=utf-8' });
-  }
+/* ---------- downloads: the original results, and the editor handoff ---------- */
+const ORIGINAL_COLS = ['rank', 'post_slot', 'episode', 'segments_in_order', 'duration_seconds', 'hook', 'cliffhanger', 'why_it_works', 'why_this_slot', 'spoiler'];
+const HANDOFF_COLS = ['rank', 'post_slot', 'episode', 'segments_in_order', 'duration_seconds', 'your_decision', 'boundary_status', 'your_trim_attempt', 'original_segments', 'hook', 'cliffhanger', 'why_it_works', 'description_status', 'note'];
+const REREVIEW = 'Needs re-review: the cut moved after the hook, cliffhanger and why were written.';
+const segTextWith = (tk, tr) => tk.segments.map((sg, i) => `Ep ${sg.episode} ${fmt(i === 0 ? tr.in : sg.start)} to ${fmt(i === 0 ? tr.out : sg.end)}`).join(' + ');
+const durWith = (tk, tr) => ((tr.out - tr.in) + tk.segments.slice(1).reduce((a, g) => a + (g.end - g.start), 0)) / 100;
+const origTrim = tk => ({ in: win(tk).start, out: win(tk).end });
+function trimProblems(tk, tr) {                      // the same rules the Review page shows live, plus the total length
+  if (!(tr.out > tr.in)) return ['the end is not after the start'];
+  const out = [], total = durWith(tk, tr);
+  if (total < 20 || total > 60) out.push(`${total.toFixed(1)} seconds is outside the 20 to 60 limit`);
+  checks(win(tk), tr).slice(1).forEach(c => { if (!c.ok) out.push(c.text.charAt(0).toLowerCase() + c.text.slice(1)); });
+  return out;
+}
+function handoff() {
+  const rows = [], left = [], sum = { keep: 0, trim: 0, unrated: 0, passed: 0, moved: 0, reverted: 0 };
+  sortedTakes().forEach(tk => {
+    const s = saved[tk.id], d = (s && s.d) || 'unrated', o = origTrim(tk), cur = trimFor(tk), moved = isTrimmed(tk);
+    if (d === 'pass') { sum.passed++; left.push({ rank: tk.rank, episode: tk.episode, segments_in_order: segTextWith(tk, o), reason: 'You marked this Pass, so it is not in the handoff.' }); return; }
+    const bad = moved ? trimProblems(tk, cur) : [], good = moved && !bad.length, use = good ? cur : o;
+    let status = 'As found by the tool';
+    if (good) { status = 'Moved by you; all checks pass'; sum.moved++; }
+    if (moved && bad.length) { status = `Your trim failed the checks (${bad.join('; ')}), so the original boundaries are kept`; sum.reverted++; }
+    sum[d]++;
+    rows.push({ rank: tk.rank, post_slot: PLAN_NAME[tk.plan], episode: tk.episode, segments_in_order: segTextWith(tk, use), duration_seconds: +durWith(tk, use).toFixed(1),
+      your_decision: d, boundary_status: status, your_trim_attempt: moved && bad.length ? segTextWith(tk, cur) : '', original_segments: good ? segTextWith(tk, o) : '',
+      hook: tk.ai.hook, cliffhanger: tk.ai.cliff, why_it_works: tk.ai.why || '', description_status: good ? REREVIEW : 'Written for these boundaries',
+      note: d === 'trim' && !moved ? 'Marked trim, but no new cut points were set.' : '' });
+  });
+  return { rows, left, sum };
+}
+const handoffNote = () => {
+  const { sum } = handoff(), parts = [`keep ${sum.keep}`, `trim ${sum.trim}`, `not rated ${sum.unrated}`];
+  return `${parts.join(', ')}${sum.passed ? ` · ${sum.passed} marked Pass and left out` : ''}${sum.moved ? ` · ${sum.moved} moved, hook and why need re-review` : ''}${sum.reverted ? ` · ${sum.reverted} invalid trim${sum.reverted > 1 ? 's' : ''} reverted to the original` : ''}`;
+};
+const csvCell = v => { let t = String(v ?? ''); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return '"' + t.replace(/"/g, '""') + '"'; };
+function saveBlob(blob, name) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-  toast(`Downloaded ${rows.length} promos.`);
+}
+function download(kind, cols, rows, extra, name) {
+  const blob = kind === 'json' ? new Blob([JSON.stringify({ show: D.show.title, ...extra, promos: rows }, null, 2)], { type: 'application/json' })
+    : new Blob([[cols.join(','), ...rows.map(r => cols.map(c => csvCell(r[c])).join(','))].join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  saveBlob(blob, `${name}-${D.id}.${kind}`);
+}
+function downloadResults(kind) {                      // exactly as the tool found them: never changed by trims or ratings
+  const rows = sortedTakes().map(tk => ({
+    rank: tk.rank, post_slot: PLAN_NAME[tk.plan], episode: tk.episode, segments_in_order: segTextWith(tk, origTrim(tk)),
+    duration_seconds: +durWith(tk, origTrim(tk)).toFixed(1), hook: tk.ai.hook, cliffhanger: tk.ai.cliff, why_it_works: tk.ai.why, why_this_slot: tk.ai.planReason, spoiler: tk.ai.spoiler || 'none',
+  }));
+  download(kind, ORIGINAL_COLS, rows, {}, 'promos-original');
+  toast(rows.length ? `Downloaded the original ${rows.length} promos.` : 'This run has no promos, so the file holds only the column names.');
+}
+function downloadHandoff(kind) {                      // your decisions and checked boundaries, ready for an editor
+  const { rows, left, sum } = handoff();
+  download(kind, HANDOFF_COLS, rows, { note: 'Passed cuts are left out. A moved cut keeps the original hook, cliffhanger and why, flagged for re-review. An invalid trim is reverted to the original boundaries.', summary: sum, left_out: left }, 'editor-handoff');
+  toast(rows.length ? `Downloaded the editor handoff: ${rows.length} cut${rows.length > 1 ? 's' : ''}${left.length ? `, ${left.length} left out` : ''}.` : 'Nothing to hand off: every cut is marked Pass, or the run has no promos. The file holds only the column names.');
 }
 
 /* ---------- router ---------- */
@@ -669,7 +758,7 @@ function route() {
   if (view === 'promos') renderPromos();
   if (view === 'season') renderSeason();
   if (view === 'quality') renderQuality();
-  if (view === 'review') { go(cur, false); }
+  if (view === 'review' && !EMPTY) go(cur, false);
   const sc = document.querySelector('.view.on'); if (sc) sc.scrollTop = 0;
   document.title = ({ promos: 'Promos', review: 'Review', season: 'Season', quality: 'Quality', new: 'New show' })[view] + ' · ' + D.show.title + ' · Promo Finder';
 }
@@ -680,19 +769,28 @@ function roll(target) {
   E.app.removeAttribute('aria-hidden');
   setTimeout(() => E.intro.classList.add('gone'), reduced ? 0 : 1000);
   location.hash = '#/' + target;
-  if (target === 'review') go(cur, true);
+  if (target === 'review' && !EMPTY) go(cur, true);
 }
 function init() {
   E.showTitle.textContent = D.show.title;
   if (D.show.demo) { const d = document.getElementById('demoPill'); d.hidden = false; }
   E.introTitle.textContent = D.show.title;
   const n = D.takes.length, eps = new Set(D.takes.map(t => t.episode)).size;
-  E.introLede.textContent = `${n} promos found in ${eps} episodes`;
-  E.introSub.textContent = 'Ranked in posting order, each with its start and end times, the hook, the cliffhanger and why it works. Watch any of them as the script plays, trim it, and say keep, trim or pass.';
+  E.introLede.textContent = EMPTY ? 'No promo passed the checks in this run' : NOAI ? `${plural(n, 'candidate cut', 'candidate cuts')} from ${eps} episodes, no AI used` : `${plural(n, 'promo', 'promos')} found in ${eps} episodes`;
+  E.introSub.textContent = EMPTY ? 'Nothing reached the shortlist. The next page says what was tried, whether the run was interrupted, and which timing-checked cuts an editor can still review.'
+    : 'Ranked in posting order, each with its start and end times, the hook, the cliffhanger and why it works. Watch any of them as the script plays, trim it, and say keep, trim or pass.';
   E.blindBtn.setAttribute('aria-pressed', ui.blind); E.app.classList.toggle('blind', ui.blind);
-  buildOrder(); renderStrip(); renderFeed(); renderProgress(); wire();
-  const firstOpen = order.findIndex(di => !(saved[D.takes[di].id] && saved[D.takes[di].id].d));   // resume where you left off
-  cur = Math.max(0, firstOpen);
+  wire();
+  if (EMPTY) {                                                  // nothing to play or rate: say so, and keep every other page working
+    E.app.classList.add('empty-run'); E.rollBlindBtn.hidden = true;
+    document.getElementById('v-review').insertAdjacentHTML('beforeend', `<div class="review-empty"><h1>Nothing to review yet</h1>
+      <p class="lede">No promo passed the checks in this run, so there is nothing to play or rate. The Promos page lists the timing-checked cuts an editor can still look at, and the Season page shows why each episode has none.</p>
+      <div class="export-box" style="max-width:520px"><div><a class="pill primary" href="#/promos">See what was found</a><a class="pill" href="#/season">See the season</a></div></div></div>`);
+  } else {
+    buildOrder(); renderStrip(); renderFeed(); renderProgress();
+    const firstOpen = order.findIndex(di => !(saved[D.takes[di].id] && saved[D.takes[di].id].d));   // resume where you left off
+    cur = Math.max(0, firstOpen);
+  }
   E.rollBtn.addEventListener('click', () => roll('promos'));
   E.rollBlindBtn.addEventListener('click', () => roll('review'));
   window.addEventListener('hashchange', route);

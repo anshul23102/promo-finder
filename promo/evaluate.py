@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections import Counter
 import re
 
-from .cuts import HOOK_WINDOW, MAX_LEN, MIN_LEN, MIN_SEGMENT, Segment, opens_mid_sentence, overlap
+from .cuts import HOOK_WINDOW, MAX_LEN, MIN_LEN, MIN_SEGMENT, Segment, ends_mid_sentence, opens_mid_sentence, overlap
 from .screenplay import Episode, clean_edges, stamp
 
 AI_SOURCES = ("editor", "beats")  # the AI finders (v3 whole-promo editor, v4 beat scorer)
@@ -61,6 +61,8 @@ def check_rules(promos: list[dict], episodes: dict[int, Episode]) -> list[str]:
                 problems.append(f"{p['id']}: segment {i + 1} shorter than 5 s")
             if opens_mid_sentence(ep, s.start):
                 problems.append(f"{p['id']}: segment {i + 1} opens on a dangling line")
+            if ends_mid_sentence(ep, s.end):
+                problems.append(f"{p['id']}: segment {i + 1} ends before the same speaker finishes the sentence")
             edges = edges_by_episode[s.episode]
             if s.start not in edges or s.end not in edges:
                 problems.append(f"{p['id']}: segment {i + 1} cuts through a spoken line")

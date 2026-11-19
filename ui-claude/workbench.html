@@ -62,7 +62,7 @@
     <button class="pill primary big" id="run" type="button" disabled>Find the promos</button>
     <p class="err" id="err" role="alert"></p>
     <div id="prog" hidden><p><span class="spin"></span><b id="phase">Starting</b></p><div class="log" id="log"></div></div>
-    <p id="doneBox" hidden><a class="pill primary big" id="open" href="#" style="display:inline-block;text-decoration:none;margin-top:12px">Open the results</a></p>
+    <div id="doneBox" hidden><p id="doneSummary" style="margin-top:12px"></p><ul id="doneWarn" class="err" style="padding-left:20px"></ul><a class="pill primary big" id="open" href="#" style="display:inline-block;text-decoration:none;margin-top:12px">Open the results</a></div>
   </section>
 
   <section class="step recent" id="recent" hidden><h2>Earlier runs</h2><div id="recentList"></div></section>
@@ -106,7 +106,7 @@
 
   const recent = () => api('/api/jobs').then(list => {
     $('recent').hidden = !list.length;
-    $('recentList').innerHTML = list.map(j => `<a href="/view/${j.id}/">${esc(j.title || 'My show')}<span>${new Date(j.when * 1000).toLocaleString()}</span></a>`).join('');
+    $('recentList').innerHTML = list.map(j => `<a href="/view/${j.id}/">${esc(j.title || 'My show')}<span>${new Date(j.when * 1000).toLocaleString()}${j.promos === 0 ? ' · no promos' : ''}${j.warnings ? ' · interrupted' : ''}</span></a>`).join('');
   }).catch(() => {});
   recent();
 
@@ -121,7 +121,13 @@
         const j = await api('/api/job?id=' + id);
         $('phase').textContent = j.phase || (j.status === 'queued' ? 'Starting' : 'Working');
         $('log').textContent = (j.log || []).join('\n');
-        if (j.status === 'done') { $('prog').hidden = true; $('doneBox').hidden = false; $('open').href = j.url; recent(); $('run').disabled = false; return; }
+        if (j.status === 'done') {
+          $('prog').hidden = true; $('doneBox').hidden = false; $('open').href = j.url; recent(); $('run').disabled = false;
+          const w = j.warnings || [], n = j.promos ?? 0;
+          $('doneSummary').textContent = (w.length ? 'The run did not finish cleanly. ' : '') + (n ? `${n} promo${n === 1 ? '' : 's'} shortlisted from ${j.episodes ?? '?'} episodes.` : 'No promo passed the checks in this run; the results page lists the timing-checked cuts an editor can still review.');
+          $('doneWarn').innerHTML = ''; w.forEach(x => { const li = document.createElement('li'); li.textContent = x; $('doneWarn').appendChild(li); });
+          return;
+        }
         if (j.status === 'error') { $('prog').hidden = true; $('err').textContent = j.message; $('run').disabled = false; return; }
         setTimeout(poll, 1500);
       };
