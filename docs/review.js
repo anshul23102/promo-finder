@@ -397,7 +397,7 @@ function wire() {
 }
 
 let started = false;
-function start(id) {
+function enter(id) {          // the tab opened (optionally on one promo); not the same as start(), which plays the reel
   if (EMPTY) {
     document.getElementById('room').innerHTML = '<div style="padding:40px"><h1>Nothing to review yet</h1><p class="muted">No promo passed the checks in this run.</p></div>';
     return;
@@ -407,6 +407,6 @@ function start(id) {
   const firstOpen = order.findIndex(di => !(saved[D.takes[di].id] && saved[D.takes[di].id].d));
   go(at >= 0 ? at : (started && cur ? cur : Math.max(0, firstOpen)), at >= 0);
 }
-window.PromoReview = { start, stop };
+window.PromoReview = { start: enter, stop };
 window.dispatchEvent(new Event('promo-review-ready'));
 })();
