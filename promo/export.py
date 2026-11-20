@@ -155,17 +155,12 @@ def eval_markdown(ev, summary) -> str:
         if not h["all"]["n"]:
             continue
         a, pf = h["all"], h["post_first"]
-        label = "Human review" if h.get("kind", "human") == "human" else "Second-AI review (NOT a human)"
+        label = "Human review"
         queue = ", ".join(f"{d} {r}" for d, r in h.get("mean_queue_rank", {}).items())
         lines.append(f"- **{label}** ({h['reviewer']}): {a['n']} promos judged; kept or trimmed {a['keep_or_trim_rate']:.0%} "
                      f"(keep {a['keep']}, trim {a['trim']}, pass {a['pass']}). Post-first picks: {('%.0f%%' % (100 * pf['keep_or_trim_rate'])) if pf['n'] else 'n/a'} "
                      f"of {pf['n']}. By finder: " + ", ".join(f"{k} {v['keep_or_trim_rate']:.0%} of {v['n']}" for k, v in h["by_finder"].items() if v["n"])
                      + f". Average place in the tool's queue by decision: {queue}.")
-    g = ev.get("review_agreement")
-    if g:
-        lines.append(f"- **Reviewer agreement** ({g['a']} vs {g['b']}, {g['cuts']} cuts): identical on {g['identical']}; agree on post-vs-pass for "
-                     f"{g['post_vs_pass_agree']}; Cohen's kappa {g['kappa_three_way']} (three-way) and {g['kappa_post_vs_pass']} (post vs pass). "
-                     "Near zero means they agree no more than chance.")
     lines += ["", "## Why candidates were rejected", ""]
     lines += [f"- {reason}: {count}" for reason, count in ev["rejections"].items()] or ["- none"]
     if w["detail"]:
@@ -183,11 +178,8 @@ def write_all(out: Path, summary, notes, ordered, entries, rejected, ranking, ra
     rows = [promo_row(e, episodes) for e in ordered]
     ev = evaluate(entries, rejected, list(episodes.values()), references, ranking, rows, all_episodes)
     from .evaluate import human_review
-    from .evaluate import review_agreement
     ev["reviews"] = [r for r in (human_review(x["path"], rows, x["name"], x["kind"]) for x in summary.get("reviews", [])) if r]
     ev["human_review"] = next((r for r in ev["reviews"] if r["kind"] == "human"), ev["reviews"][0] if ev["reviews"] else None)
-    ev["review_agreement"] = review_agreement(next((r for r in ev["reviews"] if r["kind"] == "human"), None),
-                                              next((r for r in ev["reviews"] if r["kind"] == "ai"), None))
     summary = {**summary, "rule_violations": len(ev["rule_violations"])}
     coverage = episode_coverage(episodes, rows, rejected, judged=summary["judge_model"] != "none")
     save_json(out / "coverage.json", coverage)

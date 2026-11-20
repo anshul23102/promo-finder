@@ -19,9 +19,19 @@ screenplays -> parse (code) -> show guide (AI, 1 call) -> beat scores (AI, 1 cal
 - **The cold viewer** gets only the clip and its original speaker labels, then says what it understood and what it is left wondering. Clips a stranger can't follow, or whose ending answers its own question, are dropped. Its account is shown to the editor.
 - **Ranking** compares clips in shuffled groups over several rounds instead of trusting 1-10 scores, and reports the judge's position bias.
 - **Posting order** favours early episodes (a new viewer lands on episode 1), holds back big spoilers, posts one promo per episode first.
-- **A human decides.** The review page has keep / trim / pass and exports decisions; `--decisions <csv>` scores the tool against them. The post-first list also exports a 30 fps EDL reference. Match frame rate and reel IDs against the actual media before conforming.
+- **A person decides.** The tool only finds and orders the promos; an editor picks which to post. Each promo carries its episode, every segment's start and end, the hook, the cliffhanger and a one-line reason, as CSV, JSON and a 30 fps EDL reference (match frame rate and reel IDs against the real media before conforming).
 
 An earlier version asked one model to pick whole promos (`--finder editor`). It could not keep picks inside 60 seconds and never beat a no-AI baseline; scoring beats and letting code search fixed both.
+
+## Try it in your browser (no install, no upload)
+
+The published page has a **Run on a script** page (`run/`). Choose one episode (`.txt`) or a ZIP of `.txt` episodes and it runs the same rules finder in your browser tab (the Python engine, compiled to WebAssembly with [Pyodide](https://pyodide.org) 0.29.5, Python 3.13) and opens the same review page on your result. There are no keys, no model calls and no analytics on that path, the script is read in memory, deleted when the run ends, and never written to browser storage. Results are labelled **rules candidates**: timing-checked material for an editor, not AI-judged promos.
+
+- Limits: one `.txt` or one `.zip`, at most 25 MB, 200 episodes, 5 MB per episode, 60 MB unpacked. SRT and VTT subtitles are not read yet.
+- AI runs, bigger shows and anything confidential stay on your computer (below). If the runtime cannot start, the page says why and the demo keeps working.
+- Reviewers who cannot play the preview get a plain-text list of the same cuts under the result bar, and **Download all run files (.zip)** returns every output plus `contract.json`.
+- Checked: the browser engine and native Python produce the same output file for file (`node tools/check_browser_parity.mjs`, part of `tools/release_check.sh`), on bundled inputs, a 50-episode synthetic show and the rejection cases.
+- Runtime assets are pinned (`ui-claude/runtime.lock.json`, MPL-2.0 licence notice shipped beside them) and every file the page loads carries a content hash in its name, so a cached page cannot mix versions. Python versions tested: 3.13 (browser) and 3.15 (native).
 
 ## Run it
 
@@ -68,9 +78,13 @@ Outputs land in `private/runs/<time>/`: `index.html` (review page), `posting_pla
 
 Tests: `python3 -m unittest discover -s tests`
 
-## The cutting room (review UI)
+Before a release: `tools/release_check.sh` runs the tests, a model-swap smoke test against a local stand-in for an OpenAI-compatible endpoint (structured answers, provenance, cache replay under a new folder, wrong key, HTTP 500), a fresh build of the demo and the browser runner, and Pyodide-versus-Python parity. It needs `node` and `npm`.
 
-A web app for a finished run with two pages: **Promos** (the answer first: every promo with its segments, hook, cliffhanger, why it works and posting order, as a list or as posters; one Download menu with all results and an editor handoff that carries your keep/trim/pass decisions) and **How good is it** (the measured checks, where the tool picks badly, and every episode at a glance). Open any promo and choose Watch and trim for the review view: a vertical reel that plays the script as captions, a 3-second gate, a trim timeline that snaps to clean line breaks, keep/trim/pass, and a "Hide the AI's opinion" mode for unbiased rating. "Use on your show" explains how to run it on another show. Code lives in `ui-claude/`.
+**Integration contract.** `promo/contract.py` writes `contract.json` (`promo-finder.run/1`): input identity, ordered segments in integer centiseconds with their opening and closing evidence, run state, hashes and an idempotency key, and a separate editor handoff document. See [contract/README.md](contract/README.md) and the golden examples in `contract/examples/`.
+
+## The results page
+
+A small web app with three pages and one optional tab. **Promos** is the answer: the promos in posting order, each with its segments, hook, cliffhanger, why it works and the script of the clip, with CSV and JSON downloads. **Quality** shows the measured checks and where the tool picks badly, episode by episode. **Run it** explains how to run the tool on another show, and `run/` lets you drop in a script and get the promos right in the page. **Review (optional)** is not part of the task: it plays each promo as the script unfolds, lets you nudge its cut to a clean line break, and records keep, trim or pass for an editor handoff. Code lives in `ui-claude/`.
 
 - **Try it now, no setup:** [live demo](https://anshul23102.github.io/promo-finder/) with a made-up show (`examples/the-last-edition/`, seven episodes). The demo data is synthetic; it contains no Kuku content.
 - **Use it on your own scripts, in the browser:** `python3 ui-claude/workbench.py` opens a page where you drop episode files (or one ZIP), pick an engine (no AI, Groq, Gemini or a local model) and get the results pages. It binds to 127.0.0.1 only, checks a per-launch token, and asks you to confirm before any script text is sent to an AI provider.
@@ -85,7 +99,7 @@ It builds `private/ui-claude/` and serves 127.0.0.1 only. The built `data.js` co
 ## Limits
 
 - It reads screenplays, not footage. It can't see whether a look lands, how fast a line is delivered, or whether a viewer really stops scrolling.
-- The cold viewer and the ranking judge are models standing in for people. The quality report says how often they agree with the writers' own cliffhangers and with blind reference cuts, not how promos perform.
+- The cold viewer and the ranking judge are models standing in for people. The quality report checks the cuts against hard rules, the writers' own cliffhangers and a person's blind ratings, not how promos perform.
 - Screenplay timestamps may drift from the final edit.
 
 The supplied show is Kuku's confidential content and is not in this repository. `examples/` holds original, made-up episodes for demos.

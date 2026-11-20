@@ -1,0 +1,4 @@
+Pyodide 0.29.5 (Python 3.13.2), unmodified, copied from the npm package 'pyodide@0.29.5'.
+Pyodide is licensed under the Mozilla Public License 2.0: https://www.mozilla.org/MPL/2.0/
+Source: https://github.com/pyodide/pyodide  Python standard library (python_stdlib.zip): PSF License.
+These files are served as they were released; nothing in them was changed.

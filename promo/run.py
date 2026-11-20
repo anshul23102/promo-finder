@@ -51,10 +51,8 @@ def arguments(argv=None):
     p.add_argument("--joins", action="store_true", help="Also try cross-episode joined promos (off: 0 survived in testing)")
     p.add_argument("--title", help="Show name for the report")
     p.add_argument("--review", action="append", default=[], metavar="CSV|KIND|NAME",
-                   help="A reviewer's exported ratings, e.g. 'me.csv|human|The applicant'. Repeat for more reviewers; KIND is human or ai")
+                   help="A person's exported ratings, e.g. 'me.csv|human|The applicant'. Repeat for more reviewers; only a person's ratings are scored")
     p.add_argument("--reviewer-name", help="Who made the --decisions ratings (default: the applicant)")
-    p.add_argument("--reviewer-kind", choices=["human", "ai"], default="human",
-                   help="Say 'ai' when the decisions came from a model, so the report never calls them a human review")
     p.add_argument("--decisions", type=Path, help="CSV exported from the review page (keep / trim / pass) to score against a person")
     return p.parse_args(argv)
 
@@ -373,12 +371,12 @@ def main(argv=None, *, key=None, base_url=None, log_fn=None):
                "seconds": round(time.monotonic() - started, 1)}
     references = json.loads(args.references.read_text()) if args.references else None
     summary["decisions_file"] = str(args.decisions) if args.decisions else None
-    summary["reviewer_name"], summary["reviewer_kind"] = args.reviewer_name, args.reviewer_kind
+    summary["reviewer_name"], summary["reviewer_kind"] = args.reviewer_name, "human"
     summary["reviews"] = []
-    for spec in ([f"{args.decisions}|{args.reviewer_kind}|{args.reviewer_name or 'the applicant'}"] if args.decisions else []) + args.review:
+    for spec in ([f"{args.decisions}|human|{args.reviewer_name or 'the applicant'}"] if args.decisions else []) + args.review:
         path, kind, name = (spec.split("|") + ["human", "reviewer"])[:3]
-        if kind not in ("human", "ai"):
-            raise ValueError(f"--review kind must be human or ai, got {kind!r}")
+        if kind != "human":
+            raise ValueError(f"--review scores a person's ratings only (kind must be 'human', got {kind!r})")
         summary["reviews"].append({"path": path, "kind": kind, "name": name})
     summary["warnings"] = warnings
     out.parent.mkdir(parents=True, exist_ok=True)

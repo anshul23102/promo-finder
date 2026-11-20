@@ -123,18 +123,6 @@ class ReviewerKindTest(unittest.TestCase):
             w = csv.writer(f)
             w.writerow(["rank", "decision", "segments_in_order"])
             w.writerow([1, "keep", "Ep 2 [00:10.00 \u2013 00:36.00]"])
-        h = human_review(f.name, promos, "Codex (script review)", "ai")
-        self.assertEqual((h["reviewer"], h["kind"]), ("Codex (script review)", "ai"))
+        h = human_review(f.name, promos, "The applicant", "human")
+        self.assertEqual((h["reviewer"], h["kind"]), ("The applicant", "human"))
         self.assertEqual(human_review(f.name, promos)["kind"], "human")
-
-
-class AgreementTest(unittest.TestCase):
-    def test_kappa_and_counts(self):
-        from promo.evaluate import review_agreement
-        mk = lambda name, d: {"reviewer": name, "decisions": d}
-        a = mk("a", {"x": "keep", "y": "keep", "z": "pass", "w": "trim"})
-        b = mk("b", {"x": "keep", "y": "pass", "z": "pass", "w": "trim"})
-        g = review_agreement(a, b)
-        self.assertEqual((g["cuts"], g["identical"], g["post_vs_pass_agree"]), (4, 3, 3))
-        self.assertGreater(g["kappa_three_way"], 0.5)
-        self.assertIsNone(review_agreement(a, None))

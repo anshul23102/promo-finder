@@ -13,6 +13,14 @@ def _number(value):
     return f"{value:g}" if isinstance(value, (int, float)) else str(value or "0")
 
 
+_PLAN_LABELS = {
+    "post_first": "Post first",
+    "library": "Library",
+    "hold_back": "Hold back",
+    "alternate": "Alternate",
+}
+
+
 def _queue_entry(index, promo):
     rank = _text(promo.get("rank", index + 1))
     episode = _text(promo.get("episode"))
@@ -20,7 +28,7 @@ def _queue_entry(index, promo):
     duration = _text(_number(promo.get("duration_s")))
     return f"""
     <li><a class="queue-link" href="#cut-{index}" data-index="{index}">
-      <span class="rank">{rank}</span>
+      <span class="rank" aria-label="Rank {rank}">{rank}</span>
       <span class="queue-copy"><span class="queue-meta">Episode {episode} · {duration}s</span>
       <span class="queue-hook">{hook}</span><span class="queue-decision" hidden></span></span>
     </a></li>"""
@@ -46,13 +54,13 @@ def _cut(index, promo):
     method = _text(promo.get("method") or "Unspecified")
     why = _text(promo.get("why") or "No rationale recorded.")
     next_beat = _text(promo.get("next_beat") or "No following beat supplied.")
-    opening = _text(promo.get("opening_evidence") or "No opening evidence supplied.")
+    opening = str(promo.get("opening_evidence") or "No opening evidence supplied.")
+    frame_class = "frame-opening compact" if len(opening) > 115 else "frame-opening"
     closing = _text(promo.get("closing_evidence") or "No closing evidence supplied.")
     cliffhanger = _text(promo.get("cliffhanger") or "No cliffhanger supplied.")
-    opening_block = ""
-    if opening != hook:
-        opening_block = f"<section><h3>Opening evidence</h3><blockquote>{opening}</blockquote></section>"
-    hook_label = "Opening hook" if opening != hook else "Opening hook · exact evidence"
+    plan = promo.get("plan")
+    plan_label = _text(_PLAN_LABELS.get(plan, plan))
+    plan_badge = f'<span class="placement">{plan_label}</span>' if plan else ""
     view = promo.get("viewer") or {}
     stranger = ""
     if view:
@@ -65,9 +73,8 @@ def _cut(index, promo):
     script = ""
     if promo.get("script"):
         script = f'<details class="spoiler"><summary>Clip script</summary><pre class="script">{_text(promo["script"])}</pre></details>'
-    if promo.get("plan"):
-        plan_label = {"post_first": "Post first", "library": "Library", "hold_back": "Hold back", "alternate": "Alternate"}.get(promo["plan"], promo["plan"])
-        method = f'{method}<br>{_text(plan_label)}: {_text(promo.get("plan_reason", ""))}'
+    if plan and promo.get("plan_reason"):
+        method = f'{method}<br>{plan_label}: {_text(promo["plan_reason"])}'
     next_time = promo.get("next_beat_time")
     next_label = "Reveal the next beat" + (f" at {_text(next_time)}" if next_time else "")
     actions = "".join(
@@ -78,25 +85,38 @@ def _cut(index, promo):
     <article class="cut" id="cut-{index}" data-index="{index}" data-rank="{rank}"
          data-segments="{_text(' | '.join(segment_cells))}" data-duration="{duration}"
          aria-labelledby="title-{index}">
-      <div class="cut-meta"><span>Rank {rank}</span><span>Episode {episode}</span>
-        <span class="length">{duration} seconds</span></div>
-      <p class="hook-label">{hook_label}</p>
-      <h2 class="cut-title" tabindex="-1" id="title-{index}">{hook}</h2>
-      <table class="timings"><caption>Cut list</caption>
+      <div class="screening">
+        <div class="stage">
+          <div class="frame">
+            <div class="frame-meta"><span>EP {episode}</span><span>9:16</span></div>
+            <div class="{frame_class}" tabindex="0" role="region" aria-label="First 3 seconds"><p>First 3 seconds</p><blockquote>{_text(opening)}</blockquote></div>
+            <div class="frame-meta"><span>Script preview</span><span>{duration}s</span></div>
+          </div>
+        </div>
+        <div class="editor">
+          <div class="cut-meta"><span>Rank {rank}</span><span>Episode {episode}</span>{plan_badge}</div>
+          <p class="hook-label">Opening hook</p>
+          <h2 class="cut-title" tabindex="-1" id="title-{index}">{hook}</h2>
+          <div class="reason"><h3>Cliffhanger</h3><p>{cliffhanger}</p>
+            <h3>Why cut here?</h3><p>{why}</p></div>
+          <div class="review-tools js-only"><h3>Review decision</h3>
+            <div class="decisions" role="group" aria-label="Review decision for rank {rank}">{actions}</div>
+            <p class="decision-status" role="status"></p>
+          </div>
+        </div>
+      </div>
+      <div class="cut-notes">
+      <table class="timings"><caption>Source timecodes <span>{duration}s total</span></caption>
         <thead><tr><th scope="col">Source</th><th scope="col">In</th><th scope="col">Out</th></tr></thead>
         <tbody>{''.join(segment_rows)}</tbody></table>
       <section class="evidence" aria-label="Cut evidence">
-        {opening_block}
         <section><h3>Closing evidence</h3><blockquote>{closing}</blockquote></section>
       </section>
-      <div class="reason"><h3>Cliffhanger</h3><p>{cliffhanger}</p>
-        <h3>Why cut here?</h3><p>{why}</p></div>
       {stranger}
       <details class="spoiler"><summary>{next_label}</summary><p>{next_beat}</p></details>
       {script}
-      <div class="review-tools js-only"><div><h3>Review decision</h3>
-        <div class="decisions" role="group" aria-label="Review decision for rank {rank}">{actions}</div></div>
-        <p class="method">Selection method<br><strong>{method}</strong></p></div>
+      <p class="method">Selection method<br><strong>{method}</strong></p>
+      </div>
     </article>"""
 
 
@@ -147,7 +167,8 @@ def render_report(result: dict) -> str:
         cuts = "".join(_cut(i, p) for i, p in enumerate(promos))
         body = f"""
         <div class="workspace"><nav class="queue" aria-label="Ranked cut queue">
-          <div class="queue-head"><h2>Ranked cuts</h2><span id="progress">0 of {cut_count} reviewed</span></div>
+          <div class="queue-head"><h2>Ranked cuts</h2><span id="progress">0 of {cut_count} reviewed</span>
+            <progress id="review-progress" max="{cut_count}" value="0" aria-label="Cuts reviewed"></progress></div>
           <ol>{queue}</ol></nav><div class="detail">{cuts}</div></div>"""
         export = '<button class="export js-only" type="button" id="export">Export review CSV</button>'
     else:
@@ -159,7 +180,7 @@ def render_report(result: dict) -> str:
       <title>{_text(show)} · Promo review</title><style>{_CSS}</style></head>
       <body data-run="{run_id}"><a class="skip" href="#main">Skip to review</a>
       <header class="banner"><div class="wrap banner-inner"><div class="brand">
-      <span class="mark" aria-hidden="true"></span>Promo Finder</div>{export}</div></header>
+      <span class="mark" aria-hidden="true"></span><span>Promo Finder</span><span class="brand-section">Review studio</span></div>{export}</div></header>
       <main class="wrap" id="main"><div class="heading"><div><p class="overline">Screenplay review</p>
         <h1>{_text(show)}</h1><div class="stats"><span>{_text(episode_label)}</span>
         <span>{_text(cue_label)}</span><span>{count_label}</span></div></div>{run_details}</div>
@@ -169,69 +190,135 @@ def render_report(result: dict) -> str:
 
 
 _CSS = """
-:root {color-scheme:light;--ink:#1d2131;--muted:#525b6a;--rule:#d7dce2;--canvas:#f4f6f8;
- --accent:#364199;--active:#e9edff;--night:#272741;--focus:#9a4b00;
- font:16px/1.52 "Atkinson Hyperlegible Next","Helvetica Neue",Arial,sans-serif;}
-* {box-sizing:border-box} body {margin:0;background:var(--canvas);color:var(--ink)}
-.wrap {width:min(1160px,calc(100% - 64px));margin:0 auto}
-h1,h2,h3,p,blockquote,ol {margin:0} button,a,summary {touch-action:manipulation}
-button,summary {font:inherit;cursor:pointer} a {color:inherit}
-:focus-visible {outline:3px solid var(--focus);outline-offset:3px}
-.skip {position:absolute;top:-100px;left:12px;z-index:5;padding:8px 14px;background:white}
+:root {
+ color-scheme:dark;
+ --canvas:#100e12;--panel:#19161b;--well:#211d24;--ink:#fff6ed;--muted:#c0b1b9;
+ --rule:#3b323b;--accent:#ffa36d;--accent-ink:#23130e;--selected:#30211f;
+ font:16px/1.52 -apple-system,BlinkMacSystemFont,"Avenir Next","Segoe UI",sans-serif;
+}
+* {box-sizing:border-box}
+body {margin:0;background:radial-gradient(ellipse 70% 420px at 36% 0,#27191e 0,transparent 100%),var(--canvas);color:var(--ink)}
+.wrap {width:min(1360px,calc(100% - 80px));margin-inline:auto}
+h1,h2,h3,p,blockquote,ol {margin:0}
+a {color:inherit} button,a,summary {touch-action:manipulation}
+button,summary {font:inherit;cursor:pointer}
+:focus-visible {outline:2px solid var(--accent);outline-offset:4px}
+.skip {position:absolute;top:-100px;left:12px;z-index:5;padding:8px 14px;background:var(--well)}
 .skip:focus {top:8px}
-.banner {background:var(--night);color:#fff}.banner-inner {min-height:60px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.brand {display:flex;align-items:center;gap:12px;font-weight:720;letter-spacing:-.025em;font-size:1.08rem}
-.mark {width:26px;height:20px;display:inline-block;position:relative;border:2px solid #d6dcff;border-radius:2px}
-.mark:after {content:"";position:absolute;left:45%;top:-2px;height:20px;width:4px;transform:skew(-20deg);background:#d6dcff;border:2px solid var(--night);border-block:0}
-.export {border:1px solid #898ba5;background:transparent;color:white;border-radius:5px;padding:6px 12px;font-size:.86rem}
-.export:hover {background:#393954}.export:focus-visible {outline-color:#ffc780}
-.heading {padding:36px 0 27px;display:flex;justify-content:space-between;gap:24px;align-items:flex-end}
-.overline,.queue-meta,.queue-head span,.cut-meta,.method,.stats,.run-details {color:var(--muted);font-size:.83rem}
-.overline {margin-bottom:4px} h1 {font-size:clamp(1.65rem,3.7vw,2.85rem);font-weight:670;line-height:1.13;letter-spacing:-.047em;overflow-wrap:anywhere}
-.stats,.cut-meta {display:flex;gap:8px 16px;flex-wrap:wrap;align-items:center;font-variant-numeric:tabular-nums}
-.stats {margin-top:10px}.stats span+span {border-left:1px solid #b8bfcd;padding-left:16px}
-.episode-coverage {margin:24px 0;overflow:auto}.episode-coverage table {width:100%;border-collapse:collapse;text-align:left}.episode-coverage th,.episode-coverage td {padding:8px;border-bottom:1px solid var(--rule);vertical-align:top}.episode-coverage td p {margin:6px 0}
-.run-details {flex:none}.run-details p {padding:6px 0} summary {font-weight:600}
-.workspace {display:grid;grid-template-columns:minmax(220px,30%) minmax(0,1fr);gap:24px;align-items:start;padding-bottom:48px}
-.queue,.cut,.empty {background:white;border:1px solid var(--rule);border-radius:9px}
-.queue {overflow:hidden}.queue-head {padding:17px 18px 13px}.queue-head h2,.empty h2 {font-size:1.15rem;letter-spacing:-.025em}
-.queue ol {list-style:none;padding:0;max-height:72vh;overflow-y:auto;overscroll-behavior:contain}
+.banner {border-bottom:1px solid var(--rule);background:#140f14}
+.banner-inner {min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand {display:flex;align-items:center;gap:12px;font-weight:750;letter-spacing:-.025em}
+.brand-section {padding-left:12px;border-left:1px solid var(--rule);color:var(--muted);font-size:.84rem;font-weight:500}
+.mark {width:32px;height:32px;display:inline-grid;place-items:center;background:var(--accent);border-radius:9px}
+.mark:after {content:"";width:15px;height:15px;background:var(--accent-ink);clip-path:polygon(0 0, 100% 50%, 0 100%, 29% 50%)}
+.export {align-items:center;min-height:40px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:6px 16px;font-size:.84rem;font-weight:750}
+.export:hover {background:#ffc2a0}
+.heading {padding:34px 0 24px;display:flex;justify-content:space-between;gap:24px;align-items:flex-end}
+.overline,.queue-meta,.queue-head span,.method,.stats,.run-details {color:var(--muted);font-size:.83rem}
+.overline {margin-bottom:6px;color:var(--accent);font-weight:650}
+h1 {font:500 clamp(1.9rem,4.2vw,3.8rem)/1.05 "Iowan Old Style",Georgia,serif;letter-spacing:-.047em;overflow-wrap:anywhere}
+.stats,.cut-meta {display:flex;gap:6px 12px;flex-wrap:wrap;align-items:center;font-variant-numeric:tabular-nums}
+.stats {margin-top:13px}.stats span+span:before {content:"·";padding-right:12px;color:var(--accent)}
+.run-details {flex:none;text-align:right}.run-details p {padding-top:8px}
+summary {font-weight:650}
+.workspace {display:grid;grid-template-columns:minmax(230px, 25%) minmax(0,1fr);gap:20px;align-items:start}
+.queue,.cut,.empty,.episode-coverage {background:var(--panel);border:1px solid var(--rule);border-radius:18px}
+.queue {position:sticky;top:16px;overflow:hidden}
+.queue-head {display:grid;grid-template-columns:1fr auto;align-items:center;gap:7px;padding:16px}
+.queue-head h2,.empty h2 {font-size:1rem;letter-spacing:-.025em}
+.queue-head span {font-variant-numeric:tabular-nums}
+.queue-head progress {grid-column:1/-1;display:block;width:100%;height:4px;border:0;border-radius:99px;overflow:hidden;background:var(--rule);color:var(--accent);accent-color:var(--accent)}
+progress::-webkit-progress-bar {background:var(--rule)} progress::-webkit-progress-value {background:var(--accent)}
+.queue ol {list-style:none;padding:0;max-height:min(70vh, 710px);overflow-y:auto;overscroll-behavior:contain}
 .queue li {border-top:1px solid var(--rule)}
-.queue-link {display:grid;grid-template-columns:25px minmax(0,1fr);gap:8px;padding:13px 15px;text-decoration:none;border-left:4px solid transparent}
-.queue-link:hover {background:#f1f3f8}.queue-link[aria-current="true"] {border-left-color:var(--accent);background:var(--active)}
+.queue-link {display:grid;grid-template-columns:34px minmax(0,1fr);align-items:start;gap:10px;padding:12px 13px;text-decoration:none;border-left:3px solid transparent}
+.queue-link:hover {background:var(--well)}
+.queue-link[aria-current="true"] {border-left-color:var(--accent);background:var(--selected)}
 .queue-link:focus-visible {outline-offset:-3px}
-.rank {font-variant-numeric:tabular-nums;color:var(--muted)}
-.queue-copy {display:grid;gap:3px}.queue-hook {font-size:.94rem;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.queue-decision {width:fit-content;color:var(--accent);font-size:.77rem;font-weight:bold}
-.cut {padding:clamp(18px,3vw,37px);margin-bottom:16px;scroll-margin-top:12px}
-.cut-meta>span:first-child {font-weight:750;color:var(--accent)}.cut-meta .length {margin-left:auto}
-.hook-label {color:var(--muted);font-size:.81rem;margin:12px 0 0}.cut-title {margin:3px 0 22px;font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
- font-size:clamp(1.5rem,2.7vw,2.25rem);letter-spacing:-.028em;line-height:1.17;font-weight:600;overflow-wrap:anywhere}
-.timings {width:100%;border-collapse:collapse;margin:0 0 21px;background:#f4f5f9;font-variant-numeric:tabular-nums}
-.timings caption {text-align:left;font-weight:650;font-size:1rem;margin-bottom:5px}
-.timings th,.timings td {padding:5px 13px;text-align:left}.timings th {border-bottom:1px solid var(--rule);font-size:.82rem;color:var(--muted);font-weight:550}
-.timings td {font-family:"SFMono-Regular",Consolas,monospace;font-size:.88rem;padding-bottom:7px}
-.evidence {display:grid;gap:14px;border-left:3px solid #a8afe3;padding-left:16px;margin-bottom:20px}
-h3 {font-size:.94rem;font-weight:680}.evidence blockquote,.reason p,.spoiler p {margin-top:4px;overflow-wrap:anywhere}
-.evidence blockquote {color:#34394c;white-space:pre-line}.reason h3:not(:first-child) {margin-top:12px}
-.spoiler {margin-top:16px}.spoiler summary {color:var(--accent);font-size:.91rem;display:list-item}
-.spoiler p {padding:8px 12px;background:#f4f5f9}.review-tools {display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:22px;padding-top:16px;border-top:1px solid var(--rule)}
-.decisions {display:flex;gap:6px;margin-top:7px}.decisions button {min-height:36px;border:1px solid #a6aebc;border-radius:4px;background:white;padding:4px 16px;color:var(--ink);font-size:.9rem;font-weight:600}
-.decisions button:hover {background:#f0f2fa}.decisions button[aria-pressed="true"] {background:var(--accent);color:white;border-color:var(--accent)}
-.method {text-align:right;overflow-wrap:anywhere}.method strong {color:var(--ink);font-weight:550}
-.stranger {background:#f4f5f9;border-radius:6px;padding:12px 14px;margin-top:16px}.stranger p {margin-top:4px}
-.grades {color:var(--muted);font-size:.84rem}.script {white-space:pre-wrap;font-size:.8rem;line-height:1.45;max-height:40vh;overflow:auto;background:#f4f5f9;padding:10px}
+.rank {display:grid;place-items:center;min-height:32px;border:1px solid var(--rule);border-radius:7px;font:600 .84rem/1 ui-monospace,monospace;color:var(--muted)}
+.queue-link[aria-current="true"] .rank {background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.queue-copy {display:grid;gap:2px}
+.queue-hook {font-size:.88rem;line-height:1.36;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.queue-decision {width:fit-content;color:var(--accent);font-size:.72rem;font-weight:700}
+.cut {margin-bottom:16px;scroll-margin-top:12px}
+.screening {display:grid;grid-template-columns:minmax(195px,37%) minmax(0,1fr);border-bottom:1px solid var(--rule);border-radius:inherit}
+.stage {position:relative;isolation:isolate;display:grid;place-items:center;padding:22px;min-width:0;border-radius:17px 0 0 0;overflow:hidden;
+ background:radial-gradient(ellipse at 58% 40%,#653126 0,#301c23 41%,#19131b 80%)}
+.stage::before {content:"";position:absolute;inset:0;z-index:-1;background:
+ repeating-linear-gradient(0deg,transparent 0 3px,#fff1 4px,transparent 5px),
+ linear-gradient(128deg,transparent 26%,#faa05b29 31%,transparent 37%,#b44a3023 48%,transparent 72%);opacity:.62}
+.frame {position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:12px;width:min(100%,220px);
+ aspect-ratio:9/16;min-height:0;padding:15px;border-radius:16px;border:1px solid #a36c58;
+ background:radial-gradient(ellipse at 78% 17%,#873f2c 0,transparent 60%),linear-gradient(162deg,#52273a,#231822 60%,#151118);
+ box-shadow:0 22px 55px #10090cbb,inset 0 0 0 4px #150d143b}
+.frame-meta {display:flex;justify-content:space-between;gap:4px;color:#fae0d3;font:600 .66rem/1.2 ui-monospace,monospace;letter-spacing:.03em}
+.frame-opening {min-height:0;overflow:auto;scrollbar-width:thin;padding:3px}
+.frame-opening p {margin-bottom:8px;color:#ffb992;font-size:.72rem;font-weight:700}
+.frame-opening blockquote {font:500 clamp(1.05rem,1.65vw,1.4rem)/1.2 "Iowan Old Style",Georgia,serif;white-space:pre-line;overflow-wrap:anywhere}
+.frame-opening.compact blockquote {font-size:1.1rem;line-height:1.27}
+.editor {min-width:0;padding:clamp(18px,3vw,36px)}
+.cut-meta {color:var(--muted);font-size:.82rem}
+.cut-meta>span:first-child {font-weight:750;color:var(--accent)}
+.placement {padding:3px 9px;border:1px solid #6a4840;border-radius:30px;color:#ffc7a9;margin-left:auto}
+.hook-label {color:var(--muted);font-size:.77rem;margin-top:16px}
+.cut-title {margin:4px 0 16px;font:500 clamp(1.5rem,3.1vw,2.75rem)/1.04 "Iowan Old Style",Georgia,serif;letter-spacing:-.033em;overflow-wrap:anywhere}
+.cut-notes {padding:clamp(16px,2.7vw,30px)}
+.timings {width:100%;border-collapse:collapse;margin:0 0 21px;background:var(--well);font-variant-numeric:tabular-nums}
+.timings caption {text-align:left;font-weight:700;font-size:.93rem;margin-bottom:8px}
+.timings caption span {float:right;color:var(--accent);font:600 .8rem/1.5 ui-monospace,monospace}
+.timings th,.timings td {padding:7px 12px;text-align:left;border-bottom:1px solid var(--rule);overflow-wrap:anywhere}
+.timings th {font-size:.79rem;color:var(--muted);font-weight:550}
+.timings td {font-family:ui-monospace,monospace;font-size:.81rem}
+.evidence {border-left:2px solid var(--accent);padding-left:13px;margin-bottom:18px}
+h3 {font-size:.88rem;font-weight:700}
+.evidence blockquote,.reason p,.spoiler p {margin-top:3px;overflow-wrap:anywhere}
+.evidence blockquote,.reason p {color:var(--muted);font-size:.91rem;white-space:pre-line}
+.reason h3:not(:first-child) {margin-top:12px}
+.spoiler {margin-top:10px;border:1px solid var(--rule);border-radius:9px;background:var(--well)}
+.spoiler summary {color:var(--accent);padding:10px 12px;font-size:.88rem;display:list-item}
+.spoiler p {padding:0 12px 12px;color:var(--muted)}
+.review-tools {flex-direction:column;align-items:flex-start;margin-top:18px;padding-top:13px;border-top:1px solid var(--rule)}
+.decisions {display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.decisions button {min-height:40px;border:1px solid #665261;border-radius:999px;background:var(--well);padding:4px 17px;color:var(--ink);font-size:.86rem;font-weight:680}
+.decisions button:hover {background:#3a2c39}
+.decisions button[aria-pressed="true"] {background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.method {margin-top:16px;overflow-wrap:anywhere}.method strong {color:var(--ink);font-weight:550}
+.decision-status {color:var(--accent);font-size:.79rem;margin-top:6px}
+.decision-status:empty {display:none}
+.stranger {background:var(--well);border:1px solid var(--rule);border-radius:9px;padding:12px 14px;margin:14px 0}.stranger p {margin-top:4px}
+.grades {color:var(--muted);font-size:.84rem}
+.script {white-space:pre-wrap;overflow-wrap:anywhere;font: .8rem/1.55 ui-monospace,monospace;max-height:40vh;overflow:auto;padding:0 12px 12px}
+.episode-coverage {padding:13px 16px;margin:8px 0 28px;overflow:auto}
+.episode-coverage table {width:100%;border-collapse:collapse;text-align:left}
+.episode-coverage th,.episode-coverage td {padding:8px;border-bottom:1px solid var(--rule);vertical-align:top}
+.episode-coverage td p {margin:6px 0}
 .empty {padding:26px}.empty p {margin-top:6px}
-.notice {font-size:.85rem;color:var(--muted);margin-bottom:8px}.notice:empty {display:none}
+.notice {font-size:.85rem;color:var(--accent);margin-bottom:8px}.notice:empty {display:none}
 [hidden],.js-only {display:none!important}.ready .js-only {display:flex!important}
-@media (max-width:720px) {.wrap {width:calc(100% - 28px)}.workspace {grid-template-columns:minmax(0,1fr);gap:14px}
- .queue ol {max-height:160px}.heading {padding:22px 0 17px;align-items:start;flex-direction:column;gap:9px}
- .queue-head {padding:10px 14px;display:flex;align-items:baseline;justify-content:space-between;gap:8px}
- .queue-link {padding:9px 12px}.queue-meta {font-size:.78rem}.cut-title {margin-bottom:15px}
- .cut {scroll-margin-top:6px}.review-tools {align-items:flex-start;flex-wrap:wrap}.method {text-align:left}}
-@media (max-width:380px) {.stats {gap:5px 8px}.stats span+span {padding-left:8px}.decisions button {padding-inline:13px}}
-@media print {.banner,.queue,:root.ready .review-tools,.export,.spoiler,.run-details,.notice {display:none!important}
- .workspace {display:block}.cut[hidden] {display:block!important}.wrap {width:100%}.cut {break-inside:avoid}.heading {padding-top:0}}
+@media (max-width:1020px) {.wrap {width:calc(100% - 40px)}.workspace {gap:12px}.stage {padding:15px}}
+@media (max-width:800px) {
+ .wrap {width:calc(100% - 28px)}.workspace {grid-template-columns:minmax(0,1fr)}
+ .queue {position:static}.queue ol {max-height:164px}
+ .heading {padding:20px 0;align-items:start;flex-direction:column;gap:10px}
+ .run-details {text-align:left}.queue-head {padding:10px 13px;display:grid}
+ .queue-link {padding:8px 11px}.cut {scroll-margin-top:8px}
+}
+@media (max-width:520px) {
+ .screening {grid-template-columns:1fr}
+ .stage {min-height:220px;border-radius:17px 17px 0 0}
+ .frame {width:min(100%,220px);background-position:center}
+ .brand-section {display:none}.brand {gap:8px}
+ .mark {width:26px;height:26px}.export {padding-inline:10px;font-size:.76rem}
+}
+@media print {
+ :root {color-scheme:light;--ink:#15131a;--muted:#44404a;--canvas:white;--panel:white;--well:#fafafa;--rule:#ddd;--accent:#933a13}
+ body {background:white}
+ .banner,.queue,:root.ready .review-tools,.export,.spoiler,.run-details,.notice {display:none!important}
+ .workspace {display:block}.cut[hidden] {display:block!important}.wrap {width:100%}.cut {break-inside:avoid}.heading {padding-top:0}
+ .screening {display:block}.stage,.frame {background:white;color:var(--ink);box-shadow:none;border:0}
+ .stage::before {display:none}.frame {width:auto;aspect-ratio:auto}.frame-meta,.frame-opening p {color:var(--muted)}
+ .placement {color:var(--accent)}
+}
 """
 
 
@@ -263,15 +350,20 @@ _JS = r"""
       });
     });
     document.getElementById("progress").textContent = count + " of " + articles.length + " reviewed";
+    document.getElementById("review-progress").value = count;
   }
 
   function select(index) {
-    if (canSave) document.getElementById("notice").textContent = "";
     articles.forEach((article, i) => {
       article.hidden = i !== index;
       if (i === index) links[i].setAttribute("aria-current", "true");
       else links[i].removeAttribute("aria-current");
     });
+    const queue = links[index].closest("ol");
+    const selected = links[index].getBoundingClientRect();
+    const bounds = queue.getBoundingClientRect();
+    if (selected.top < bounds.top) queue.scrollTop += selected.top - bounds.top;
+    else if (selected.bottom > bounds.bottom) queue.scrollTop += selected.bottom - bounds.bottom;
   }
 
   function selectFromHash() {
@@ -284,9 +376,10 @@ _JS = r"""
       if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
       select(index);
-      if (location.hash !== link.hash) location.hash = link.hash;
+      if (window === window.top && location.hash !== link.hash) history.pushState(null, "", link.hash);
       articles[index].querySelector("h2").focus({preventScroll:true});
-      if (matchMedia("(max-width:720px)").matches) articles[index].scrollIntoView();
+      const cut = articles[index];
+      if (matchMedia("(max-width:800px)").matches || cut.getBoundingClientRect().top < 0) cut.scrollIntoView();
     });
     link.addEventListener("keydown", event => {
       let target;
@@ -303,7 +396,8 @@ _JS = r"""
   document.addEventListener("click", event => {
     const button = event.target.closest("[data-decision]");
     if (!button) return;
-    const index = button.closest(".cut").dataset.index;
+    const article = button.closest(".cut");
+    const index = article.dataset.index;
     const choice = button.dataset.decision;
     if (choices[index] === choice) delete choices[index];
     else choices[index] = choice;
@@ -311,8 +405,8 @@ _JS = r"""
     catch (_) { canSave = false; }
     applyDecisions();
     const status = choices[index] ? choices[index] : "unreviewed";
-    const warning = canSave ? "" : " Browser storage unavailable. Export a CSV to keep decisions.";
-    document.getElementById("notice").textContent = "Rank " + articles[Number(index)].dataset.rank + " marked " + status + "." + warning;
+    article.querySelector(".decision-status").textContent = "Rank " + article.dataset.rank + " marked " + status + ".";
+    if (!canSave) document.getElementById("notice").textContent = "Browser storage unavailable. Export a CSV to keep decisions.";
   });
 
   function csvCell(value) {

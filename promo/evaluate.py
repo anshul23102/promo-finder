@@ -164,25 +164,3 @@ def human_review(path, promos: list[dict], reviewer: str | None = None, kind: st
             "mean_queue_rank": {d: round(sum(v) / len(v), 1) for d, v in ranks.items() if v},
             "post_first": share([j for j in judged if j[0]["plan"] == "post_first"]),
             "by_finder": {src: share([j for j in judged if j[0]["source"] == src]) for src in sorted({j[0]["source"] for j in judged})}}
-
-
-def review_agreement(a: dict | None, b: dict | None) -> dict | None:
-    """How much two reviewers agree on the cuts both rated: exact, post-vs-pass, and Cohen's kappa for each."""
-    if not a or not b:
-        return None
-    keys = sorted(set(a["decisions"]) & set(b["decisions"]))
-    if not keys:
-        return None
-
-    def kappa(x, y):
-        n = len(x)
-        po = sum(i == j for i, j in zip(x, y)) / n
-        labels = set(x) | set(y)
-        pe = sum((x.count(l) / n) * (y.count(l) / n) for l in labels)
-        return None if pe == 1 else round((po - pe) / (1 - pe), 2)
-
-    x3, y3 = [a["decisions"][k] for k in keys], [b["decisions"][k] for k in keys]
-    x2, y2 = [d != "pass" for d in x3], [d != "pass" for d in y3]
-    return {"a": a["reviewer"], "b": b["reviewer"], "cuts": len(keys),
-            "identical": sum(i == j for i, j in zip(x3, y3)), "post_vs_pass_agree": sum(i == j for i, j in zip(x2, y2)),
-            "kappa_three_way": kappa(x3, y3), "kappa_post_vs_pass": kappa(x2, y2)}

@@ -1,0 +1,50 @@
+{
+ "schema": "promo-finder.handoff/1",
+ "run_id": "run-b2783bc252552bb76d413039",
+ "source_sha256": "511cb7f5adb10cb61fe7b3edc770a3f52f7c256a9c1f62a10731feb61a93dbca",
+ "source_revision": null,
+ "timeline": {
+  "unit": "centisecond",
+  "range": "start inclusive, end exclusive",
+  "times_are": "relative to the start of each episode, in the user's source timebase",
+  "media_timebase": null,
+  "reference_edl_fps": 30,
+  "note": "Frame rates are not in the scripts. Cutlist.edl is a 30 fps non-drop reference until footage conforms."
+ },
+ "ready": [
+  {
+   "id": "P001",
+   "rank": 1,
+   "segments": [
+    {
+     "episode_id": "E001",
+     "episode": 1,
+     "start_cs": 150,
+     "end_cs": 4300,
+     "duration_cs": 4150
+    }
+   ],
+   "duration_cs": 4150,
+   "boundary_status": "trimmed_by_reviewer",
+   "opening": {
+    "cue_ids": [
+     "E01-001"
+    ],
+    "text": "\"Stop the press. You printed my obituary.\" / Maya slaps the damp front page on the typesetter's counter. Her own photograph stares up at her."
+   },
+   "closing": {
+    "cue_ids": [
+     "E01-012"
+    ],
+    "text": "\"I buried you. I kept the death certificate.\""
+   },
+   "rationale": "Picked by word-based rules, not judged by a model: a strong opening line and an unresolved closing line.",
+   "needs_rereview": true,
+   "note": "Hook, closing and rationale were written for the original cut.",
+   "decision": "trim",
+   "reviewer": "Example Editor",
+   "reviewed_at": "2026-11-20T10:00:00Z"
+  }
+ ],
+ "left_out": []
+}

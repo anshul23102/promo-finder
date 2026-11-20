@@ -1,0 +1,118 @@
+{
+ "schema": "promo-finder.run/1",
+ "run_id": "run-b2783bc252552bb76d413039",
+ "engine": {
+  "name": "promo-finder",
+  "version": "1",
+  "sha256": "204dec8ef212661757f44de0cb28b9375a48ec5a8fc3fe5c10aeafa7ac59a0e7",
+  "rules_version": "rules-1"
+ },
+ "input": {
+  "show_id": "episode-001",
+  "title": "Episode 001",
+  "mode": "rules",
+  "locale": null,
+  "target_audience": null,
+  "source": {
+   "name": "episode-001.txt",
+   "sha256": "511cb7f5adb10cb61fe7b3edc770a3f52f7c256a9c1f62a10731feb61a93dbca",
+   "revision": null,
+   "kind": "txt"
+  },
+  "episodes": [
+   {
+    "episode_id": "E001",
+    "number": 1,
+    "cues": 13,
+    "duration_cs": 4900
+   }
+  ]
+ },
+ "timeline": {
+  "unit": "centisecond",
+  "range": "start inclusive, end exclusive",
+  "times_are": "relative to the start of each episode, in the user's source timebase",
+  "media_timebase": null,
+  "reference_edl_fps": 30,
+  "note": "Frame rates are not in the scripts. Cutlist.edl is a 30 fps non-drop reference until footage conforms."
+ },
+ "status": {
+  "state": "succeeded",
+  "episodes_requested": 1,
+  "episodes_parsed": 1,
+  "candidates": 1,
+  "shortlisted": 1,
+  "fallbacks": [],
+  "warnings": [],
+  "models": {
+   "editor": "rules",
+   "judge": "none"
+  },
+  "usage": []
+ },
+ "suggestions": [
+  {
+   "id": "P001",
+   "rank": 1,
+   "post_slot": "post_first",
+   "status": "timing_checked",
+   "segments": [
+    {
+     "episode_id": "E001",
+     "episode": 1,
+     "start_cs": 0,
+     "end_cs": 4300,
+     "duration_cs": 4300
+    }
+   ],
+   "duration_cs": 4300,
+   "opening": {
+    "cue_ids": [
+     "E01-001"
+    ],
+    "text": "\"Stop the press. You printed my obituary.\" / Maya slaps the damp front page on the typesetter's counter. Her own photograph stares up at her."
+   },
+   "closing": {
+    "cue_ids": [
+     "E01-012"
+    ],
+    "text": "\"I buried you. I kept the death certificate.\""
+   },
+   "rationale": "Picked by word-based rules, not judged by a model: a strong opening line and an unresolved closing line.",
+   "rationale_source": "template",
+   "spoiler": "none",
+   "provenance": {
+    "found_by": "rules",
+    "scored_by": null,
+    "judged_by": null
+   }
+  }
+ ],
+ "review": {
+  "decisions": [],
+  "ready_requires_human_decision": true,
+  "note": "Nothing here is approved. A person marks a cut ready; the approved cut list is the separate handoff document."
+ },
+ "invariants": {
+  "input_sha256": "511cb7f5adb10cb61fe7b3edc770a3f52f7c256a9c1f62a10731feb61a93dbca",
+  "config_sha256": "af85662160ece2cc66657b9c856061e1d6ad32c7510d971c17b34e104372d1f2",
+  "config": {
+   "mode": "rules",
+   "editor_model": "rules",
+   "judge_model": "none",
+   "finder": "rules",
+   "duration_s": [
+    20,
+    60
+   ],
+   "hook_window_s": 3
+  },
+  "idempotency_key": "b2783bc252552bb76d413039",
+  "outputs_sha256": {
+   "cutlist.edl": "ff73f24ce3c567c3d4e94adb3e4340981fc39157bed28b05e532409e586cf423",
+   "evaluation.md": "30a57c5e1c0b206cabe8b275acf45407ebc388445baa9f2b0b144bf4bb41a119",
+   "posting_plan.md": "7361a25652b01bbf1ceba8b5cf71463b504e2703aab60b52220e83b183cc84c9",
+   "promos.csv": "021361ba530c5eb9e85265cc39b8e14731c597d99236326f08ef3f353ba31d6a"
+  }
+ }
+}

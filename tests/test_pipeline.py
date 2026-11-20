@@ -250,7 +250,7 @@ class ResilientRunTest(unittest.TestCase):
                 main(args, log_fn=lambda _: None)
             self.assertEqual(json.loads((out / "promos.json").read_text())["promos"], [])
             coverage = json.loads((out / "coverage.json").read_text())
-            self.assertEqual([r["status"] for r in coverage], ["Review needed", "No eligible cut"])
+            self.assertEqual([r["status"] for r in coverage], ["Review needed", "Review needed"])   # the second episode ends on its own last beat, which the rules now accept as an ending
             self.assertIn("Cold viewer unavailable", (out / "evaluation.md").read_text())
             with self.assertRaisesRegex(ValueError, "already contains a run"):
                 main(args, log_fn=lambda _: None)

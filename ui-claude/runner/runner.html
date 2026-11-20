@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A0A14">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'none'">
+<title>Run on a script · Promo Finder</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2040%2040%22%3E%3Crect%20x%3D%228%22%20y%3D%221.5%22%20width%3D%2224%22%20height%3D%2237%22%20rx%3D%227%22%20fill%3D%22%23FF641C%22/%3E%3Cpath%20d%3D%22M16.6%207.2v10.4l9-5.2z%22%20fill%3D%22%23fff%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../fonts.css">
+<link rel="stylesheet" href="../app.css">
+<link rel="stylesheet" href="__RUNNER_CSS__">
+</head>
+<body class="runner">
+
+<header class="bar">
+  <a class="brand" href="../#/promos" aria-label="Promo Finder, back to the demo">
+    <svg class="mark" aria-hidden="true" viewBox="0 0 40 40"><rect x="8" y="1.5" width="24" height="37" rx="7" fill="#FF641C"/><path d="M16.6 7.2v10.4l9-5.2z" fill="#fff"/></svg>
+    <span class="brand-name">Promo<b>Finder</b></span>
+  </a>
+  <nav class="nav" aria-label="Pages">
+    <a href="../#/promos">Promos</a>
+    <a href="../#/quality">Quality</a>
+    <a href="./" class="on" aria-current="page">Run it</a>
+    <a href="../review/">Review <small>optional</small></a>
+  </nav>
+  <p class="show" id="where">Run on a script</p>
+</header>
+
+<main id="main">
+  <section id="start" class="r-start" aria-labelledby="h1">
+    <div class="r-copy">
+      <h1 id="h1">Drop a script.<br>Get the promos.</h1>
+      <p class="lede">Choose one episode (.txt) or a ZIP of episodes, exactly as Kuku sends them. The finder runs in this tab, finds a 20 to 60 second cut in every episode and shows you the same results page, with no AI and no upload.</p>
+
+      <div class="r-drop" id="drop">
+        <input id="file" class="r-file" type="file" accept=".txt,.zip,text/plain,application/zip">
+        <div class="r-lit">
+          <small>Hook</small>
+          <p>Drop the episodes here</p>
+          <label for="file" class="pill primary big" id="chooseLabel">Choose a file</label>
+          <span class="r-hint">one .txt or one .zip</span>
+        </div>
+        <div class="r-seam" aria-hidden="true"></div>
+        <div class="r-dim"><small>Cliffhanger</small><p>Promos come back in a second or two</p></div>
+      </div>
+      <div class="r-or"><span>No script to hand? Try a made-up show:</span>
+        <button class="pill" type="button" data-example="the-last-edition.zip">The Last Edition (7 episodes)</button>
+        <button class="pill" type="button" data-example="last-edition.zip">Last Edition (2 episodes)</button>
+      </div>
+      <p class="r-status" id="status" role="status" aria-live="polite" hidden></p>
+      <div class="r-error" id="error" role="alert" hidden></div>
+      <p><button class="pill" type="button" id="cancel" hidden>Cancel</button></p>
+    </div>
+
+    <aside class="r-facts" aria-label="What to expect">
+      <section><h2>What you get</h2>
+        <p>One timing-checked cut per episode, ranked, each with its segment times, an opening line, an ending and a reason. They are <b>rules candidates</b>: found by word-based timing rules, not judged by an AI or a person. The AI-judged version is on the Promos page.</p></section>
+      <section><h2>What stays on your computer</h2>
+        <p>Everything. No keys, no accounts, no model calls, no analytics. The script is read in memory, deleted when the run ends, and never written to browser storage.</p></section>
+      <section><h2>What it reads</h2>
+        <p>One .txt or one .zip of .txt episodes, up to 25 MB and 200 episodes. Every line needs a time range, like <code>Start: (00:02.29) | End: (00:05.17)</code>. SRT and VTT are not read yet.</p></section>
+      <section><h2>Want the AI on top?</h2>
+        <p>Run <code>python3 ui-claude/workbench.py</code> on your own computer, or the command line, with a model you choose.</p></section>
+    </aside>
+  </section>
+
+  <section id="fallback" class="r-fallback" role="alert" hidden>
+    <h2>The in-browser runner could not start</h2>
+    <p id="fallbackWhy"></p>
+    <p>The demo still works, and you can run any show on your own computer: <code>python3 ui-claude/workbench.py</code> (see the README). If this keeps happening, try a current Safari, Chrome or Firefox.</p>
+    <p><a class="pill primary" href="../">Open the demo</a> <button class="pill" type="button" id="retry">Try again</button></p>
+  </section>
+
+  <section id="result" class="r-result" hidden aria-label="Results">
+    <div class="r-bar">
+      <div class="r-title"><b id="rTitle"></b><span id="rMeta"></span></div>
+      <div class="r-actions">
+        <button class="pill primary" type="button" id="dlZip">Download all run files (.zip)</button>
+        <button class="pill" type="button" id="again">Run another script</button>
+      </div>
+    </div>
+    <details class="r-text" id="textFallback">
+      <summary>Read the results as plain text</summary>
+      <div id="textBody"></div>
+    </details>
+    <iframe id="view" class="r-view" title="Review page for your script" hidden></iframe>
+  </section>
+</main>
+
+<script src="__RUNNER_JS__"></script>
+</body>
+</html>

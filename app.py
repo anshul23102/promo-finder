@@ -22,9 +22,40 @@ from promo.llm import PRESETS, load_dotenv
 
 load_dotenv()
 st.set_page_config(page_title="Promo Finder", page_icon="🎬", layout="wide")
-st.title("Promo Finder")
-st.caption("Reads timestamped microdrama screenplays and finds 20-60 s promos that open on a hook, "
-           "end on a cliffhanger and make sense to a stranger. Code owns every timestamp; a human makes the final call.")
+st.html("""
+<style>
+.finder-intro {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    margin-bottom: 1.2rem;
+    padding: clamp(1.35rem, 4vw, 3rem);
+    border: 1px solid #543640;
+    border-radius: 18px;
+    background: radial-gradient(ellipse at 90% 0%, #673527, transparent 62%), #221721;
+}
+.finder-intro::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent 0 5px, #ffc4a108 6px, transparent 7px);
+    pointer-events: none;
+}
+.finder-intro .studio { color: #ffa36d; font-size: .83rem; font-weight: 700; margin-bottom: .2rem; }
+.finder-intro h1 {
+    padding: 0;
+    font: 500 clamp(2.6rem, 6vw, 5rem)/1 "Iowan Old Style", Georgia, serif;
+    letter-spacing: -.05em;
+}
+.finder-intro .intro-copy { max-width: 34rem; color: #e2ced7; margin: .8rem 0 0; }
+</style>
+<section class="finder-intro" aria-labelledby="finder-title">
+    <p class="studio">Microdrama review studio</p>
+    <h1 id="finder-title">Promo Finder</h1>
+    <p class="intro-copy">Find 20–60 second promos in a timed screenplay. Review each opening, cliffhanger and source timecode before you send a cut to edit.</p>
+</section>
+""")
 
 available_providers = ["gemini", "groq", "openrouter", "openai"]
 with st.sidebar:
@@ -101,8 +132,8 @@ if "out" in st.session_state and Path(st.session_state["out"]).is_dir():
     b.metric("Candidates", summary["candidates"])
     c.metric("Timing-checked" if summary["judge_model"] == "none" else "Viewer shortlist", summary["passed"])
     d.metric("Rule violations", summary["rule_violations"])
-    tab_plan, tab_review, tab_coverage, tab_quality, tab_files = st.tabs(
-        ["Posting plan", "Review clips", "Episode coverage", "Quality", "Download"]
+    tab_review, tab_plan, tab_coverage, tab_quality, tab_files = st.tabs(
+        ["Review clips", "Posting plan", "Episode coverage", "Quality", "Download"]
     )
     with tab_plan:
         rows = [{"#": p["rank"], "slot": p["plan"], "segments": "; ".join(f"E{s['episode']} {s['start']}-{s['end']}" for s in p["segments"]),

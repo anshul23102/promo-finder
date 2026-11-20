@@ -229,6 +229,14 @@ def next_beat(episode: Episode, end: int) -> Cue | None:
     return next(story_beats_after(episode, end), None)
 
 
+def _episode_end_bonus(episode: Episode, ending: Cue) -> float:
+    """Microdrama episodes are written to stop on a cliffhanger: the continuity notes of the 14 episodes that name one all
+    describe the episode's last beat. So an ending at (or just before) the episode's own last beat is a better cliffhanger
+    than one in the middle, whatever the words say."""
+    tail = episode.duration - ending.end
+    return 2.5 if tail <= 600 else 1.2 if tail <= 1500 else 0.0
+
+
 def propose(episode: Episode, limit: int = 5) -> list[Window]:
     if limit < 1 or episode.duration < 2000:
         return []
@@ -254,7 +262,7 @@ def propose(episode: Episode, limit: int = 5) -> list[Window]:
             if not 2000 <= length <= 6000 or ending.start < initial.end:
                 continue
             _, end_score = scores[ending.id]
-            if end_score < 0.2:
+            if end_score < 0.2 and episode.duration - ending.end > 600:       # the episode's own last beat is allowed to be quiet
                 continue
             if ending.kind != "dialogue" and any(ending.start < c.start < ending.end - 100 for c in speeches):
                 continue
@@ -264,7 +272,7 @@ def propose(episode: Episode, limit: int = 5) -> list[Window]:
             coherence = min(0.8, len(sequence) * 0.14)
             if initial.scene and ending.scene and initial.scene != ending.scene:
                 coherence -= 1.4
-            score = hook_score + end_score + coherence - abs(length - 3350) / 11000
+            score = hook_score + end_score + coherence - abs(length - 3350) / 11000 + _episode_end_bonus(episode, ending)
             window = Window(initial.start, ending.end, initial, ending, round(score, 3))
             key = (window.start, window.end)
             if key not in best or window.score > best[key].score:

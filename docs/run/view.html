@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; base-uri 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A0A14">
+<title>Promo Finder</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2040%2040%22%3E%3Cdefs%3E%3CclipPath%20id%3D%22t%22%3E%3Cpath%20d%3D%22M0%200H40V18.6L0%2025.4Z%22/%3E%3C/clipPath%3E%3CclipPath%20id%3D%22b%22%3E%3Cpath%20d%3D%22M0%2031.6L40%2024.8V40H0Z%22/%3E%3C/clipPath%3E%3C/defs%3E%3Crect%20x%3D%228%22%20y%3D%221.5%22%20width%3D%2224%22%20height%3D%2237%22%20rx%3D%227%22%20fill%3D%22%23FF641C%22%20clip-path%3D%22url%28%23t%29%22/%3E%3Cg%20transform%3D%22translate%282.4%201.4%29%22%3E%3Crect%20x%3D%228%22%20y%3D%221.5%22%20width%3D%2224%22%20height%3D%2237%22%20rx%3D%227%22%20fill%3D%22%23FF641C%22%20opacity%3D%22.4%22%20clip-path%3D%22url%28%23b%29%22/%3E%3C/g%3E%3Cpath%20d%3D%22M16.6%207.2v10.4l9-5.2z%22%20fill%3D%22%23fff%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../fonts.css">
+<link rel="stylesheet" href="../app.css?v=d54a3943d9">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="logo" viewBox="0 0 40 40">
+    <defs>
+      <clipPath id="logoTop"><path d="M0 0H40V18.6L0 25.4Z"/></clipPath>
+      <clipPath id="logoBottom"><path d="M0 31.6L40 24.8V40H0Z"/></clipPath>
+    </defs>
+    <rect x="8" y="1.5" width="24" height="37" rx="7" fill="#FF641C" clip-path="url(#logoTop)"/>
+    <g transform="translate(2.4 1.4)"><rect x="8" y="1.5" width="24" height="37" rx="7" fill="#FF641C" opacity=".4" clip-path="url(#logoBottom)"/></g>
+    <path d="M16.6 7.2v10.4l9-5.2z" fill="#fff"/>
+  </symbol>
+</svg>
+
+<div id="app" class="app">
+  <header class="bar">
+    <a class="brand" href="#/promos" aria-label="Promo Finder, home">
+      <svg class="mark" aria-hidden="true"><use href="#logo"/></svg>
+      <span class="brand-name">Promo<b>Finder</b></span>
+    </a>
+    <nav class="nav" id="nav" aria-label="Pages">
+      <a href="#/promos" data-nav="promos">Promos</a>
+      <a href="#/season" data-nav="season">Season</a>
+      <a href="#/quality" data-nav="quality">Quality</a>
+      <a href="#/run" data-nav="run">Run it</a>
+      <a href="review/" id="navReview">Review <small>optional</small></a>
+    </nav>
+    <p class="show" id="showTitle"></p>
+    <p class="demo-pill" id="demoPill" hidden>Demo with a made-up show</p>
+  </header>
+
+  <main class="views">
+    <section class="view" id="v-promos" aria-label="Promos"><div class="pg" id="promosPage"></div></section>
+    <section class="view" id="v-season" aria-label="Season"><div class="pg" id="seasonPage"></div></section>
+    <section class="view" id="v-quality" aria-label="Quality"><div class="pg" id="qualityPage"></div></section>
+
+    <section class="view" id="v-run" aria-label="Run it">
+      <div class="pg">
+        <section class="hero">
+          <h1>Use it on another show</h1>
+          <p class="lede">Any show whose screenplay files carry timed cues works unchanged. Nothing here is specific to one story.</p>
+        </section>
+
+        <section class="band split" id="runHere" hidden>
+          <div><h2>In this page, no install</h2>
+            <p>Choose one episode (.txt) or a ZIP of episodes and get this same page for your show in seconds. The finder runs inside your browser, with no AI and no upload; your files never leave your computer.</p></div>
+          <p><a class="pill primary" id="runHereLink" href="run/">Run on a script</a></p>
+        </section>
+
+        <section class="band split">
+          <div><h2>On the command line</h2>
+            <p>Rules only: no key, no AI, under a second for a whole show. Add a model to have it score and judge the cuts. Swap the model with one flag: <code>gemini</code>, <code>groq</code>, <code>openrouter</code>, <code>ollama</code>, or any OpenAI-compatible endpoint.</p></div>
+<pre class="code">python3 -m promo path/to/scripts.zip
+
+python3 -m promo path/to/scripts.zip \
+  --model groq:openai/gpt-oss-120b \
+  --judge groq:qwen/qwen3.8-27b --no-guide</pre>
+        </section>
+
+        <section class="band split">
+          <div><h2>What goes in</h2>
+            <p>One text file per episode, or one ZIP of them. Each cue is a label, a time range and the text. ACTION, CAMERA and SOUND FX are understood; any other label is a speaker. The episode number comes from the file name (<code>ep_3.txt</code>, <code>episode-003.txt</code>) or an <code>EPISODE NUMBER:</code> line. A logline and continuity notes help but are optional.</p></div>
+<pre class="code">**MAYA (stunned):**
+Start: (00:02.29) | End: (00:05.17)
+"H. Calloway. Our publisher signed your death."</pre>
+        </section>
+
+        <section class="band split">
+          <div><h2>See the results of a run as this page</h2>
+            <p>The command line writes <code>promos.csv</code>, <code>promos.json</code>, <code>posting_plan.md</code> and a page like this one.</p></div>
+<pre class="code">python3 ui-claude/serve.py \
+  --run out/ --pack path/to/scripts.zip</pre>
+        </section>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="bootstrap.1aba02221f.js"></script>
+<script src="../app.js?v=cf4343485c"></script>
+</body>
+</html>

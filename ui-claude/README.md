@@ -1,34 +1,19 @@
-# The cutting room
+# The results page
 
-A local web app for reviewing the promos the tool found. Dark, orange and Figtree in the spirit of Kuku's own apps,
-built around what the job really is: watching a vertical cut and deciding.
+A small static web app that shows a finished run: the ranked promos, the quality checks and how to run the tool on another show.
+Dark, orange and Figtree, in the spirit of Kuku's own apps. Vanilla HTML, CSS and JS, no build step.
 
-- **The reel** plays a take as the script unfolds: shot HUD, narration, kinetic subtitles with speaker chips, a backdrop
-  that shifts with the speaker. There is no footage, only script, and the app says so by never pretending otherwise.
-- **The 3-second gate** is a ring around the reel that fills for the first three seconds, then reads "Gate cleared" or "Quiet start".
-- **The cut to black** at the end shows the question the clip leaves hanging, with a peek at what happens next.
-- **The vertical timeline** beside the reel lets you trim. Handles land only on clean line breaks and the slate re-checks the
-  20 to 60 second rule, the 3-second rule, dangling openings and mid-sentence endings as you drag.
-- **The season strip** is a film strip of every episode with a pulse line of where the tool saw hooks (orange) and cliffhangers (gold).
-- **The slate** holds the take's metadata and the keep / trim / pass verdict.
-- **Blind mode** hides every AI opinion, shuffles the takes and flattens the strip, so your rating is your own.
-
-Export writes a CSV the tool can score: `python3 -m promo ... --review "cutting-room.csv|human|You"`.
+- **Promos.** Each promo is a card lit at the top (the hook) and dimmed below a diagonal cut (the cliffhanger), with its segments,
+  why it works and the clip's script (the first 3 seconds highlighted). CSV and JSON downloads. Rules-only cuts for episodes the AI
+  did not judge are listed separately and labelled.
+- **Quality.** Hard rules, the writers' own cliffhangers, episode coverage, what was thrown away and why, known weak spots, and a row per episode.
+- **Run it.** The three ways to run the tool, and the input format. `run/` is the in-browser runner: drop in a script, get the promos.
+- **Review (optional), `review/`.** Not part of the task. Plays a promo as the script unfolds, lets you nudge its cut to a clean line break (checked against the 20 to 60 second rule) and mark keep / trim / pass, then downloads a handoff list for an editor. Marks stay in the browser.
 
 ## Run
 
-    python3 ui-claude/serve.py --run private/runs/v5-eval-final --pack <scripts.zip> --beats private/runs/v4-full \
-        --review "me|You|human|ratings.csv"
+    python3 ui-claude/serve.py --run <run folder> --pack <scripts.zip>
 
-Keys: Space play, left/right take, K/T/P verdict, [ ] set in or out, R restart, B blind, F theatre, ? help.
-
-## Privacy
-
-`index.html`, `app.css`, `app.js`, `fonts/` hold no show content. The built `data.js` contains script text and ratings:
-it is written under `private/` and must never be published. Fonts are Figtree and Bricolage Grotesque (SIL Open Font License, see `fonts/NOTICE.txt`).
-
-## Demo site
-
-The published demo is built from a made-up show:
-
-    python3 ui-claude/build_data.py --run <demo run> --pack examples/the-last-edition --beats <demo run> --out site --demo
+`data.js` contains script text. It is written under `private/` for real shows and must never be published.
+`index.html`, `app.css`, `app.js` and `fonts/` hold no show content (Figtree and Bricolage Grotesque, SIL Open Font License, see `fonts/NOTICE.txt`).
+`build_data.py` writes `data.js`; `build_runner.py` adds the in-browser runner (`run/`) to a built site.
