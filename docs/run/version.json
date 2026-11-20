@@ -1,5 +1,5 @@
 {
- "release": "dev",
+ "release": "5fd36dc",
  "worker": "worker.1585c4e340.js",
  "pyodide": "0.29.5",
  "python": "3.13.2",
@@ -65,8 +65,8 @@
    "sha256": "831fd1e535084b972f87c6a35275de3d236efd5166f5e77ce89497710635e73c"
   },
   "view.html": {
-   "bytes": 13930,
-   "sha256": "e14df729b6e98df0bd29d4bb2885a8b6b8f9bf4af7b78aa4a72b13fb06ea89a6"
+   "bytes": 13981,
+   "sha256": "b07cb34b5d83ceabc178fc6b6a8a99c06492c1e383df433751071a010c14e6e9"
   },
   "worker.1585c4e340.js": {
    "bytes": 4725,
