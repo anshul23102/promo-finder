@@ -8,6 +8,7 @@ The built folder contains script text: keep it private.
 """
 import argparse
 import functools
+import os
 import http.server
 import subprocess
 import sys
@@ -23,6 +24,13 @@ ap.add_argument("--out", default="private/ui-claude")
 own, rest = ap.parse_known_args()
 
 subprocess.run([sys.executable, str(HERE / "build_data.py"), "--out", own.out, *rest], check=True)
+# The Run it tab needs the pinned Pyodide runtime. If an unpacked copy is at private/pyodide-package (or PYODIDE_PKG), add it;
+# otherwise the tab says the runner is not part of this copy.
+runtime = Path(os.environ.get("PYODIDE_PKG") or Path(own.out).parent / "pyodide-package")
+if (runtime / "package.json").exists():
+    subprocess.run([sys.executable, str(HERE / "build_runner.py"), "--site", own.out, "--runtime", str(runtime), "--release", "local"], check=True)
+else:
+    print("Run it tab: no Pyodide copy found (see ui-claude/build_runner.py); the tab will say so.")
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):

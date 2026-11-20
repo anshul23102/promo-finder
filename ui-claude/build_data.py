@@ -55,20 +55,14 @@ def main():
     out = args.out
     out.mkdir(parents=True, exist_ok=True)
     stamp_id = str(int(time.time()))          # a new query string on every build, so browsers never serve a stale copy
-    for name in ("app.css", "app.js"):
+    for name in ("app.css", "app.js", "review.css", "review.js"):
         shutil.copy2(HERE / name, out / name)
     html = (HERE / "index.html").read_text(encoding="utf-8")
-    for ref in ("fonts.css", "app.css", "data.js", "app.js"):
+    for ref in ("fonts.css", "app.css", "data.js", "app.js"):   # review.css and review.js take app.js's version from its URL
         html = html.replace(f'"{ref}"', f'"{ref}?v={stamp_id}"')
     (out / "index.html").write_text(html, encoding="utf-8")
-    rv = out / "review"                       # the optional review studio, its own page next to the results page
-    rv.mkdir(exist_ok=True)
-    for name in ("review.css", "review.js"):
-        shutil.copy2(HERE / "review" / name, rv / name)
-    rhtml = (HERE / "review" / "index.html").read_text(encoding="utf-8")
-    for ref in ("../fonts.css", "review.css", "../data.js", "review.js"):
-        rhtml = rhtml.replace(f'"{ref}"', f'"{ref}?v={stamp_id}"')
-    (rv / "index.html").write_text(rhtml, encoding="utf-8")
+    (out / "review").mkdir(exist_ok=True)        # the old review/ address now lands on the Review tab of the single page
+    (out / "review" / "index.html").write_text('<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=../#/review"><title>Review</title><a href="../#/review">Review</a>', encoding="utf-8")
     shutil.copy2(HERE / "fonts" / "fonts.css", out / "fonts.css")
     (out / "fonts").mkdir(exist_ok=True)
     for f in (HERE / "fonts").glob("*.woff2"):

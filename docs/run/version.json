@@ -1,5 +1,6 @@
 {
- "release": "3147064",
+ "release": "55f6bc2",
+ "worker": "worker.2c32ac09c6.js",
  "pyodide": "0.29.5",
  "python": "3.13.2",
  "engine": "engine.216b6d27d1.zip",
@@ -36,16 +37,8 @@
    "sha256": "0635957b9c53f1c66b03a34138e898fd83f7d618693074f69883a93e7251b78f"
   },
   "index.html": {
-   "bytes": 5607,
-   "sha256": "dd0cf02769d384f0d311ca1439192204192a3b418da3fe9834e02265c0bda089"
-  },
-  "runner.7097de901c.js": {
-   "bytes": 8462,
-   "sha256": "7097de901cdc8eaddfbb2fc2d49088368124c1a5258aae89f935be725e0efd9e"
-  },
-  "runner.ece878486a.css": {
-   "bytes": 4765,
-   "sha256": "ece878486af40d44bc5d4702fff97d527aebfd2ad070451d1011cbb2640870c5"
+   "bytes": 140,
+   "sha256": "bbdc97ae3f9a3da873f0ad43e82518311190dc4334f4747200c7dcdbcff2f801"
   },
   "runtime/pyodide-0.29.5/NOTICE.txt": {
    "bytes": 358,
@@ -72,8 +65,8 @@
    "sha256": "831fd1e535084b972f87c6a35275de3d236efd5166f5e77ce89497710635e73c"
   },
   "view.html": {
-   "bytes": 5510,
-   "sha256": "a07eada67ada39d3166e0a2e68d1e9d595542162ae2200404c6b27f14144ec2a"
+   "bytes": 13930,
+   "sha256": "74a794ff099e979f4f7197d914766918e69a774a8b3dfcfb6ae4a00731060017"
   },
   "worker.2c32ac09c6.js": {
    "bytes": 4725,

@@ -5,10 +5,11 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; base-uri 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0A0A14">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'none'">
 <title>Promo Finder</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2040%2040%22%3E%3Cdefs%3E%3CclipPath%20id%3D%22t%22%3E%3Cpath%20d%3D%22M0%200H40V18.6L0%2025.4Z%22/%3E%3C/clipPath%3E%3CclipPath%20id%3D%22b%22%3E%3Cpath%20d%3D%22M0%2031.6L40%2024.8V40H0Z%22/%3E%3C/clipPath%3E%3C/defs%3E%3Crect%20x%3D%228%22%20y%3D%221.5%22%20width%3D%2224%22%20height%3D%2237%22%20rx%3D%227%22%20fill%3D%22%23FF641C%22%20clip-path%3D%22url%28%23t%29%22/%3E%3Cg%20transform%3D%22translate%282.4%201.4%29%22%3E%3Crect%20x%3D%228%22%20y%3D%221.5%22%20width%3D%2224%22%20height%3D%2237%22%20rx%3D%227%22%20fill%3D%22%23FF641C%22%20opacity%3D%22.4%22%20clip-path%3D%22url%28%23b%29%22/%3E%3C/g%3E%3Cpath%20d%3D%22M16.6%207.2v10.4l9-5.2z%22%20fill%3D%22%23fff%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="../fonts.css">
-<link rel="stylesheet" href="../app.css?v=d54a3943d9">
+<link rel="stylesheet" href="../app.css?v=ade7b3d1c3">
 </head>
 <body>
 
@@ -35,7 +36,7 @@
       <a href="#/season" data-nav="season">Season</a>
       <a href="#/quality" data-nav="quality">Quality</a>
       <a href="#/run" data-nav="run">Run it</a>
-      <a href="review/" id="navReview">Review <small>optional</small></a>
+      <a href="#/review" data-nav="review">Review <small>optional</small></a>
     </nav>
     <p class="show" id="showTitle"></p>
     <p class="demo-pill" id="demoPill" hidden>Demo with a made-up show</p>
@@ -46,49 +47,168 @@
     <section class="view" id="v-season" aria-label="Season"><div class="pg" id="seasonPage"></div></section>
     <section class="view" id="v-quality" aria-label="Quality"><div class="pg" id="qualityPage"></div></section>
 
+    <!-- Run it: bring any show, get its promos. The Python finder runs in this tab; nothing is uploaded. -->
     <section class="view" id="v-run" aria-label="Run it">
       <div class="pg">
-        <section class="hero">
-          <h1>Use it on another show</h1>
-          <p class="lede">Any show whose screenplay files carry timed cues works unchanged. Nothing here is specific to one story.</p>
+        <section class="hero run-hero">
+          <h1>Bring a show.<br>Get its promos.</h1>
+          <p class="lede">Drop the episodes exactly as Kuku sends them, pick a whole folder, or paste one script. The finder runs inside this tab, finds a 20 to 60 second cut in every episode and shows you the same results pages. No AI, no account, no upload.</p>
         </section>
 
-        <section class="band split" id="runHere" hidden>
-          <div><h2>In this page, no install</h2>
-            <p>Choose one episode (.txt) or a ZIP of episodes and get this same page for your show in seconds. The finder runs inside your browser, with no AI and no upload; your files never leave your computer.</p></div>
-          <p><a class="pill primary" id="runHereLink" href="run/">Run on a script</a></p>
+        <div class="banner" id="runUnavailable" role="status" hidden>
+          <b>The in-page runner is not part of this copy.</b>
+          <p>Open the published demo to use it, or run <code>python3 -m promo path/to/scripts.zip</code> on your own computer.</p>
+        </div>
+
+        <section class="run-grid" id="runStart">
+          <div class="run-main">
+            <div class="run-tabs" role="tablist" aria-label="How to bring a show">
+              <button type="button" role="tab" aria-selected="true" data-panel="files">Files or a folder</button>
+              <button type="button" role="tab" aria-selected="false" data-panel="paste">Paste a script</button>
+              <button type="button" role="tab" aria-selected="false" data-panel="example">Try a made-up show</button>
+            </div>
+
+            <div class="run-panel" id="panel-files">
+              <div class="drop" id="drop">
+                <input id="fileIn" class="sr-only" type="file" multiple accept=".txt,.zip,text/plain,application/zip">
+                <input id="dirIn" class="sr-only" type="file" webkitdirectory multiple>
+                <div class="drop-lit">
+                  <small>Hook</small>
+                  <p>Drop episodes here</p>
+                  <div class="drop-actions">
+                    <label for="fileIn" class="pill primary" id="chooseFiles">Choose files</label>
+                    <label for="dirIn" class="pill" id="chooseDir">Choose a folder</label>
+                  </div>
+                  <span class="hint">many .txt episodes, one .zip, or a whole folder</span>
+                </div>
+                <div class="drop-seam" aria-hidden="true"></div>
+                <div class="drop-dim"><small>Cliffhanger</small><p>The promos come back in a second or two</p></div>
+              </div>
+            </div>
+
+            <div class="run-panel" id="panel-paste" hidden>
+              <label class="sr-only" for="pasteIn">Paste one episode's script</label>
+              <textarea id="pasteIn" class="paste" rows="11" spellcheck="false" placeholder="EPISODE NUMBER: 1&#10;&#10;**MAYA (stunned):**&#10;Start: (00:02.29) | End: (00:05.17)&#10;&quot;H. Calloway. Our publisher signed your death.&quot;"></textarea>
+              <p><button class="pill primary" type="button" id="pasteGo">Find the promos</button> <span class="hint">One episode. Each line needs a time range.</span></p>
+            </div>
+
+            <div class="run-panel" id="panel-example" hidden>
+              <p class="hint">No script to hand? These are invented, so you can see what comes back.</p>
+              <p class="run-examples"><button class="pill" type="button" data-example="the-last-edition.zip">The Last Edition <small>7 episodes</small></button><button class="pill" type="button" data-example="last-edition.zip">Last Edition <small>2 episodes</small></button></p>
+            </div>
+
+            <p class="run-status" id="runStatus" role="status" aria-live="polite" hidden></p>
+            <div class="run-error" id="runError" role="alert" hidden></div>
+            <p><button class="pill" type="button" id="runCancel" hidden>Cancel</button></p>
+          </div>
+
+          <aside class="run-facts" aria-label="What to expect">
+            <section><h2>What you get</h2><p>One timing-checked cut per episode, ranked, with segment times, an opening line, an ending and a reason. They are <b>rules candidates</b>: found by word-based timing rules, not judged by an AI or a person. The AI-judged version is on the Promos page.</p></section>
+            <section><h2>What stays on your computer</h2><p>Everything. No keys, no accounts, no model calls, no analytics. Your files are read in memory, deleted when the run ends and never written to browser storage.</p></section>
+            <section><h2>What it reads</h2><p>Text screenplays with a time range on every line, like <code>Start: (00:02.29) | End: (00:05.17)</code>. Up to 25 MB and 200 episodes. SRT and VTT subtitle files are not read yet.</p></section>
+          </aside>
+        </section>
+
+        <section class="run-fallback" id="runFallback" role="alert" hidden>
+          <h2>The in-page runner could not start</h2>
+          <p id="runFallbackWhy"></p>
+          <p>Everything else on this site still works. You can run any show on your own computer with <code>python3 -m promo path/to/scripts.zip</code>. If this keeps happening, try a current Safari, Chrome or Firefox.</p>
+          <p><button class="pill primary" type="button" id="runRetry">Try again</button></p>
+        </section>
+
+        <section class="run-result" id="runResult" hidden aria-label="Results">
+          <div class="run-bar">
+            <p class="run-title"><b id="rTitle"></b><span id="rMeta"></span></p>
+            <div class="run-actions">
+              <button class="pill primary" type="button" id="dlZip">Download all run files (.zip)</button>
+              <button class="pill" type="button" id="runAgain">Run another show</button>
+            </div>
+          </div>
+          <iframe id="runView" class="run-view" title="Results for the show you brought" hidden></iframe>
         </section>
 
         <section class="band split">
-          <div><h2>On the command line</h2>
-            <p>Rules only: no key, no AI, under a second for a whole show. Add a model to have it score and judge the cuts. Swap the model with one flag: <code>gemini</code>, <code>groq</code>, <code>openrouter</code>, <code>ollama</code>, or any OpenAI-compatible endpoint.</p></div>
+          <div><h2>Want the AI on top?</h2>
+            <p>The browser version stops at rules candidates. On your own computer, add a model: it scores every line as an opening and an ending, a second model checks each clip like a first-time viewer, and the survivors are ranked. Swap the model with one flag: <code>gemini</code>, <code>groq</code>, <code>openrouter</code>, <code>ollama</code>, or any OpenAI-compatible endpoint.</p></div>
 <pre class="code">python3 -m promo path/to/scripts.zip
 
 python3 -m promo path/to/scripts.zip \
   --model groq:openai/gpt-oss-120b \
   --judge groq:qwen/qwen3.8-27b --no-guide</pre>
         </section>
+      </div>
+    </section>
 
-        <section class="band split">
-          <div><h2>What goes in</h2>
-            <p>One text file per episode, or one ZIP of them. Each cue is a label, a time range and the text. ACTION, CAMERA and SOUND FX are understood; any other label is a speaker. The episode number comes from the file name (<code>ep_3.txt</code>, <code>episode-003.txt</code>) or an <code>EPISODE NUMBER:</code> line. A logline and continuity notes help but are optional.</p></div>
-<pre class="code">**MAYA (stunned):**
-Start: (00:02.29) | End: (00:05.17)
-"H. Calloway. Our publisher signed your death."</pre>
+    <!-- Review: optional. Its script and styles load the first time this tab opens. -->
+    <section class="view" id="v-review" aria-label="Review">
+      <div class="optional-note">
+        <span class="tag-opt">Optional</span>
+        <p>The tool's job ends at the list of promos. This is the step after it: play each promo as it would run, nudge the cut points (they snap to clean line breaks and are checked against the 20 to 60 second rule), and mark keep, trim or pass. Your marks stay in this browser; the handoff is a list an editor can cut from.</p>
+        <span id="progress" class="muted"></span>
+        <button id="rvCsv" class="pill" type="button">Download handoff (CSV)</button>
+        <button id="rvJson" class="pill" type="button">JSON</button>
+      </div>
+      <div class="room" id="room">
+        <aside class="feed" id="feed" aria-label="Promos to review"></aside>
+
+        <section class="stage" aria-label="Player">
+          <div class="phone-wrap">
+            <div class="phone" id="phone">
+              <svg class="gate" viewBox="0 0 360 640" aria-hidden="true">
+                <rect class="gate-track" x="3" y="3" width="354" height="634" rx="46" pathLength="100"/>
+                <rect class="gate-arc" id="gateArc" x="3" y="3" width="354" height="634" rx="46" pathLength="100"/>
+              </svg>
+              <div class="screen" id="screen">
+                <div class="backdrop" aria-hidden="true"><i class="orb o1"></i><i class="orb o2"></i><i class="grain"></i><i class="vignette"></i></div>
+                <div class="hud">
+                  <div class="hud-shot" id="shotTag"></div>
+                  <div class="hud-gate" id="gateTag"></div>
+                </div>
+                <p class="narration" id="narr"></p>
+                <div class="subtitle" id="sub"><span class="who" id="subWho"></span><p class="line" id="subLine"></p></div>
+                <p class="sfx" id="sfx"></p>
+                <div class="cut" id="cutScreen" aria-live="polite">
+                  <div class="cut-line"></div>
+                  <p class="cut-kicker">The clip ends here</p>
+                  <p class="cut-question" id="cutQuestion"></p>
+                  <div class="cut-actions">
+                    <button class="pill ghost" id="peekBtn" type="button">Peek at what happens next</button>
+                    <button class="pill ghost" id="replayBtn" type="button">Replay</button>
+                  </div>
+                  <p class="cut-peek" id="cutPeek" hidden></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="timeline-card">
+            <div class="timeline-head">
+              <p class="timeline-title">Trim the cut</p>
+              <p class="timeline-hint" id="timelineHint">Drag In and Out. They land only on clean line breaks.</p>
+            </div>
+            <div class="timeline" id="timeline"></div>
+          </div>
+          <div class="transport" role="group" aria-label="Playback">
+            <button id="playBtn" class="icon-btn lg" type="button" aria-label="Play"></button>
+            <button id="restartBtn" class="icon-btn" type="button" aria-label="Restart (R)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M20 6.5v11L10 12z" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>
+            </button>
+            <span class="clock" id="clock">00:00.0</span>
+            <span class="clock dim" id="clockTotal"></span>
+            <span class="spacer"></span>
+            <button id="speedBtn" class="chip" type="button" aria-label="Playback speed">1x</button>
+            <button id="theatreBtn" class="chip" type="button" aria-pressed="false" title="Hide everything but the reel (F)">Theatre</button>
+          </div>
         </section>
 
-        <section class="band split">
-          <div><h2>See the results of a run as this page</h2>
-            <p>The command line writes <code>promos.csv</code>, <code>promos.json</code>, <code>posting_plan.md</code> and a page like this one.</p></div>
-<pre class="code">python3 ui-claude/serve.py \
-  --run out/ --pack path/to/scripts.zip</pre>
-        </section>
+        <aside class="slate" id="slate" aria-label="Verdict"></aside>
       </div>
     </section>
   </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
 <script src="bootstrap.1aba02221f.js"></script>
-<script src="../app.js?v=cf4343485c"></script>
+<script src="../app.js?v=343a981f19"></script>
 </body>
 </html>

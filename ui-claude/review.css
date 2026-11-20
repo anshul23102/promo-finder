@@ -1,0 +1,563 @@
+/* Review studio styles, scoped to the Review view so they cannot touch the other pages. Loaded the first time Review opens. */
+#v-review p, #v-review h1, #v-review h2, #v-review dl, #v-review dd, #v-review dt { margin: 0;
+}
+#v-review .pill {
+  border: 1px solid var(--line-2); background: transparent; border-radius: 999px; padding: 9px 18px;
+  font-weight: 600; transition: background .15s, border-color .15s, transform .15s;
+}
+#v-review .pill:hover { background: rgba(255,255,255,.07);
+}
+#v-review .pill:active { transform: scale(.97);
+}
+#v-review .pill.primary { background: var(--orange); border-color: var(--orange); color: #fff;
+}
+#v-review .pill.primary:hover { background: var(--orange-hot); border-color: var(--orange-hot);
+}
+#v-review .pill.big { padding: 15px 28px; font-size: 17px;
+}
+#v-review .pill.ghost { background: rgba(255,255,255,.06);
+}
+#v-review .chip {
+  border: 1px solid var(--line-2); background: rgba(255,255,255,.04); border-radius: 999px; padding: 5px 12px;
+  font-size: 13px; font-weight: 600; color: var(--text-2);
+}
+#v-review .chip[aria-pressed="true"] { background: var(--orange-soft); border-color: var(--orange); color: #fff;
+}
+#v-review .icon-btn {
+  width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%;
+  border: 1px solid var(--line-2); background: rgba(255,255,255,.04); font-weight: 700; color: var(--text-2);
+}
+#v-review .icon-btn:hover { background: rgba(255,255,255,.1); color: #fff;
+}
+#v-review .icon-btn svg { width: 18px; height: 18px;
+}
+#v-review .icon-btn.lg { width: 54px; height: 54px; background: var(--orange); border-color: var(--orange); color: #fff;
+}
+#v-review .icon-btn.lg:hover { background: var(--orange-hot);
+}
+#v-review .icon-btn.lg svg { width: 24px; height: 24px;
+}
+#v-review .strip, #v-review .bar, #v-review .room, #v-review .views { min-width: 0;
+}
+#v-review .bar {
+  display: flex; align-items: center; gap: 18px; padding: 9px 24px; border-bottom: 1px solid var(--line);
+  background: linear-gradient(var(--ink-0), var(--ink-1));
+}
+#v-review .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit;
+}
+#v-review .mark { width: 34px; height: 34px; flex: none;
+}
+#v-review .mark.xl { width: 52px; height: 52px;
+}
+#v-review .brand-name { font: 800 20px/1 var(--display); letter-spacing: -.03em;
+}
+#v-review .brand-name b { font-weight: 500; color: var(--orange-hot); margin-left: 1px;
+}
+#v-review .show { color: var(--text-2); font-weight: 500; padding-left: 18px; border-left: 1px solid var(--line-2); min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#v-review .bar-actions { margin-left: auto; display: flex; align-items: center; gap: 12px;
+}
+#v-review .progress { display: flex; align-items: center; gap: 10px; color: var(--text-2); font-weight: 600; font-size: 14px;
+}
+#v-review .progress svg { width: 34px; height: 34px; transform: rotate(-90deg);
+}
+#v-review .progress circle { fill: none; stroke-width: 4;
+}
+#v-review .progress .p-track { stroke: var(--ink-4);
+}
+#v-review .progress .p-fill { stroke: var(--keep); stroke-linecap: round; transition: stroke-dasharray .5s var(--ease);
+}
+#v-review .switch {
+  display: flex; align-items: center; gap: 9px; border: 1px solid var(--line-2); background: rgba(255,255,255,.04);
+  border-radius: 999px; padding: 6px 14px 6px 8px; font-weight: 600; color: var(--text-2);
+}
+#v-review .switch-dot { width: 22px; height: 22px; border-radius: 50%; background: var(--ink-4); border: 2px solid var(--text-3); transition: all .2s;
+}
+#v-review .switch[aria-pressed="true"] { color: #fff; border-color: var(--orange); background: var(--orange-soft);
+}
+#v-review .switch[aria-pressed="true"] .switch-dot { background: var(--orange); border-color: var(--orange-hot); box-shadow: 0 0 14px var(--orange-hot);
+}
+#v-review .demo-pill {
+  flex: none; border: 1px solid var(--gold); color: var(--gold); border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 600;
+  background: rgba(248,197,67,.08);
+}
+#v-review .room {
+  display: grid; grid-template-columns: minmax(270px, 330px) minmax(0, 1fr) minmax(320px, 400px); gap: 22px;
+  padding: 18px 24px 20px; min-height: 0;
+}
+#v-review .feed, #v-review .slate { min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--ink-4) transparent; padding-right: 4px;
+}
+#v-review .rail-title { display: flex; align-items: baseline; justify-content: space-between; margin: 18px 4px 10px;
+}
+#v-review .rail-title:first-child { margin-top: 2px;
+}
+#v-review .rail-title h2 { font: 700 17px/1.2 var(--display); letter-spacing: -.01em;
+}
+#v-review .rail-title span { color: var(--text-3); font-size: 13px; font-weight: 600;
+}
+#v-review .rail-note { color: var(--text-3); font-size: 13px; margin: -4px 4px 10px; max-width: 34ch;
+}
+#v-review .take {
+  position: relative; width: 100%; display: grid; grid-template-columns: 60px 1fr auto; gap: 12px; align-items: center;
+  text-align: left; padding: 8px; margin-bottom: 8px; border-radius: var(--radius); background: var(--ink-2); border: 1px solid var(--line);
+  transition: background .15s, border-color .15s, transform .15s var(--ease);
+}
+#v-review .take:hover { background: var(--ink-3); transform: translateX(3px);
+}
+#v-review .take.on { background: var(--ink-3); border-color: var(--orange-hot); box-shadow: 0 10px 28px -14px rgba(255,100,28,.65);
+}
+#v-review .poster {
+  position: relative; width: 60px; aspect-ratio: 9 / 16; border-radius: 10px; overflow: hidden;
+  background:
+    radial-gradient(120% 70% at 20% 0%, hsl(var(--h) 90% 55% / .85), transparent 60%),
+    radial-gradient(110% 80% at 90% 100%, hsl(calc(var(--h) + 70) 80% 40% / .8), transparent 65%),
+    #14141f;
+}
+#v-review .poster::after { content: ''; position: absolute; inset: 0; background: linear-gradient(transparent 45%, rgba(0,0,0,.7));
+}
+#v-review .poster b { position: absolute; left: 6px; top: 4px; font: 800 24px/1 var(--display); letter-spacing: -.03em; z-index: 1; text-shadow: 0 2px 10px rgba(0,0,0,.5);
+}
+#v-review .poster i {
+  position: absolute; left: 6px; bottom: 6px; z-index: 1; font-style: normal; font-size: 11px; font-weight: 700;
+  background: rgba(0,0,0,.6); border-radius: 999px; padding: 2px 7px;
+}
+#v-review .take .open { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-weight: 500; color: var(--text); line-height: 1.35; font-size: 14px;
+}
+#v-review .take .sub { display: block; color: var(--text-3); font-size: 12.5px; margin-top: 4px; font-weight: 500;
+}
+#v-review .verdict-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line-2); align-self: start; margin-top: 6px;
+}
+#v-review .verdict-dot.keep { background: var(--keep); border-color: var(--keep); box-shadow: 0 0 10px rgba(65,255,106,.6);
+}
+#v-review .verdict-dot.trim { background: var(--trim); border-color: var(--trim);
+}
+#v-review .verdict-dot.pass { background: var(--pass); border-color: var(--pass);
+}
+#v-review .stage {
+  --ph: min(calc(100vh - 262px), 700px);
+  min-height: 0; display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; justify-content: center; align-content: start;
+  column-gap: 18px; row-gap: 12px; position: relative; overflow-y: auto; scrollbar-width: none;
+}
+#v-review .stage::before {
+  content: ''; position: absolute; top: 2%; left: 50%; translate: -50% 0; width: min(640px, 95%); aspect-ratio: 1; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, hsl(var(--glow-h, 20) 95% 50% / .17), transparent);
+  filter: blur(30px); transition: background 1.2s;
+}
+#v-review .phone-wrap { position: relative; z-index: 1; grid-column: 1; grid-row: 1;
+}
+#v-review .phone {
+  position: relative; height: var(--ph); width: calc(var(--ph) * 9 / 16); border-radius: 46px; background: #000; container-type: size;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 50px 120px -40px hsl(var(--glow-h, 20) 95% 45% / .7), 0 20px 50px rgba(0,0,0,.6);
+  transition: box-shadow .8s;
+}
+#v-review .gate { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5;
+}
+#v-review .gate-track { fill: none; stroke: rgba(255,255,255,.1); stroke-width: 2;
+}
+#v-review .gate-arc { fill: none; stroke: var(--orange-hot); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 0 100;
+  filter: drop-shadow(0 0 7px rgba(255,100,28,.95));
+}
+#v-review .screen { position: absolute; inset: 7px; border-radius: 40px; overflow: hidden; background: var(--ink-0); isolation: isolate;
+}
+#v-review .backdrop { position: absolute; inset: 0; z-index: -1;
+}
+#v-review .orb { position: absolute; border-radius: 50%; filter: blur(38px); opacity: calc(.2 + var(--glow, .2) * .5); transition: background 1.2s, opacity .6s;
+}
+#v-review .o1 { width: 90%; aspect-ratio: 1; left: -25%; top: -8%; background: hsl(var(--h1, 22) 90% 46%); animation: drift1 14s ease-in-out infinite alternate;
+}
+#v-review .o2 { width: 80%; aspect-ratio: 1; right: -30%; bottom: -12%; background: hsl(var(--h2, 262) 70% 38%); animation: drift2 17s ease-in-out infinite alternate;
+}
+@keyframes drift1 { to { transform: translate(14%, 18%) scale(1.15); } }
+@keyframes drift2 { to { transform: translate(-16%, -14%) scale(1.1); } }
+#v-review .grain {
+  position: absolute; inset: 0; opacity: .16; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+#v-review .vignette { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 45%, transparent 35%, rgba(0,0,0,.72));
+}
+#v-review .hud { position: absolute; left: 6cqw; right: 6cqw; top: 6cqw; display: flex; justify-content: space-between; align-items: flex-start; gap: 3cqw; z-index: 2;
+}
+#v-review .hud-shot { max-width: 60%; font-weight: 600; font-size: 3.1cqw; line-height: 1.25; color: rgba(255,255,255,.78);
+}
+#v-review .hud-shot b {
+  display: inline-block; position: relative; font-weight: 700; padding: 1.3cqw 2.4cqw; font-size: 3.4cqw; color: #fff;
+  background: linear-gradient(currentColor, currentColor) top left / 2.4cqw 2px no-repeat, linear-gradient(currentColor, currentColor) top left / 2px 2.4cqw no-repeat,
+    linear-gradient(currentColor, currentColor) bottom right / 2.4cqw 2px no-repeat, linear-gradient(currentColor, currentColor) bottom right / 2px 2.4cqw no-repeat;
+}
+#v-review .hud-shot small { display: block; margin-top: 1.2cqw; font-size: 2.8cqw; color: rgba(255,255,255,.55); font-weight: 500;
+}
+#v-review .hud-gate { font-weight: 700; font-size: 3.2cqw; color: var(--orange-hot); text-align: right; text-shadow: 0 0 12px rgba(255,100,28,.7);
+}
+#v-review .hud-gate.cleared { color: var(--keep); text-shadow: 0 0 12px rgba(65,255,106,.5);
+}
+#v-review .hud-gate.quiet { color: var(--pass); text-shadow: none;
+}
+#v-review .narration {
+  position: absolute; left: 8cqw; right: 8cqw; top: 25%; z-index: 2; font-style: italic; font-weight: 500; color: var(--gold);
+  font-size: 4.6cqw; line-height: 1.4; text-wrap: balance; text-shadow: 0 2px 16px rgba(0,0,0,.8); opacity: 0; transition: opacity .35s;
+}
+#v-review .narration.on { opacity: 1;
+}
+#v-review .subtitle { position: absolute; left: 7cqw; right: 7cqw; bottom: 15%; z-index: 3;
+}
+#v-review .who {
+  display: inline-block; margin-bottom: 2.4cqw; padding: .9cqw 3cqw; border-radius: 999px; font-weight: 700; font-size: 3.5cqw;
+  background: hsl(var(--sh, 22) 80% 46% / .95); color: #fff; transform-origin: left; transition: opacity .2s;
+}
+#v-review .who:empty { display: none;
+}
+#v-review .line { font: 700 7.4cqw/1.12 var(--display); letter-spacing: -.02em; text-wrap: balance; text-shadow: 0 3px 24px rgba(0,0,0,.85);
+}
+#v-review .line .w { opacity: 0; transition: opacity .12s; display: inline-block; margin-right: .26em;
+}
+#v-review .line .w.on { opacity: 1;
+}
+#v-review .line .w.now { color: var(--orange-hot);
+}
+#v-review .sfx { position: absolute; left: 8cqw; right: 8cqw; bottom: 6cqw; z-index: 2; text-align: center; color: rgba(255,255,255,.55); font-size: 3.2cqw; font-weight: 500; opacity: 0; transition: opacity .3s;
+}
+#v-review .sfx.on { opacity: 1;
+}
+#v-review .cut { position: absolute; inset: 0; z-index: 6; background: #000; display: grid; align-content: center; justify-items: center; gap: 4cqw; padding: 10cqw; text-align: center; opacity: 0; pointer-events: none; transition: opacity .25s;
+}
+#v-review .cut.on { opacity: 1; pointer-events: auto;
+}
+#v-review .cut-line { position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: #fff; transform: scaleX(0);
+}
+#v-review .cut.on .cut-line { animation: cutline .7s var(--ease) forwards;
+}
+@keyframes cutline { 0% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(0); opacity: 0; } }
+#v-review .cut-kicker { color: var(--text-3); font-weight: 600; font-size: 3.4cqw; opacity: 0;
+}
+#v-review .cut.on .cut-kicker { animation: fadein .6s .5s forwards;
+}
+#v-review .cut-question { font: 800 8cqw/1.08 var(--display); letter-spacing: -.025em; text-wrap: balance; opacity: 0;
+}
+#v-review .cut.on .cut-question { animation: fadein .8s .75s forwards;
+}
+#v-review .cut-actions { display: grid; gap: 2cqw; opacity: 0; width: 100%;
+}
+#v-review .cut.on .cut-actions { animation: fadein .6s 1.2s forwards;
+}
+#v-review .cut-actions .pill { font-size: 3.8cqw; padding: 2.4cqw 4cqw;
+}
+#v-review .cut-peek { color: var(--text-2); font-size: 3.6cqw; line-height: 1.5; max-width: 92%; font-style: italic;
+}
+@keyframes fadein { to { opacity: 1; } }
+#v-review .transport { position: relative; z-index: 1; grid-column: 1 / -1; grid-row: 2; display: flex; align-items: center; gap: 10px;
+}
+#v-review .clock { font-weight: 700; font-size: 15px;
+}
+#v-review .clock.dim { color: var(--text-3); font-weight: 500;
+}
+#v-review .spacer { flex: 1;
+}
+#v-review .timeline-card {
+  position: relative; z-index: 1; grid-column: 2; grid-row: 1; height: var(--ph); width: 178px; padding: 12px 12px 10px; border-radius: var(--radius);
+  background: var(--ink-2); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px;
+}
+#v-review .timeline-head { display: grid; gap: 2px;
+}
+#v-review .timeline-title { font: 700 15px/1.1 var(--display);
+}
+#v-review .timeline-hint { color: var(--text-3); font-size: 12px; line-height: 1.35;
+}
+#v-review .timeline { position: relative; flex: 1; min-height: 0; user-select: none; touch-action: none; cursor: crosshair; margin-top: 4px;
+}
+#v-review .tl-tick { position: absolute; left: 0; width: 100%; border-top: 1px solid var(--line-2); font-size: 11px; line-height: 1; padding-top: 2px; color: var(--text-3); font-weight: 600;
+}
+#v-review .tl-col { position: absolute; top: 0; bottom: 0;
+}
+#v-review .tl-col.d { left: 46px; width: 58px;
+}
+#v-review .tl-col.a { left: 108px; width: 22px;
+}
+#v-review .tl-col.c { left: 134px; width: 6px;
+}
+#v-review .tl-col.e { left: 144px; width: 8px;
+}
+#v-review .tl-cue { position: absolute; left: 0; right: 0; border-radius: 5px; min-height: 2px;
+}
+#v-review .tl-cue.d { background: #e9e9f2; opacity: .86;
+}
+#v-review .tl-cue.a { background: var(--gold); opacity: .78;
+}
+#v-review .tl-cue.c { background: var(--text-3); border-radius: 2px; opacity: .85;
+}
+#v-review .tl-edge { position: absolute; left: 0; width: 6px; height: 1px; background: var(--text-3); opacity: .6;
+}
+#v-review .tl-shade { position: absolute; left: 0; right: 0; background: rgba(6,6,12,.6); z-index: 2; pointer-events: none;
+}
+#v-review .tl-band { position: absolute; left: 40px; right: 0; border-left: 3px solid var(--orange-hot); background: rgba(226,85,6,.07); z-index: 1; pointer-events: none;
+}
+#v-review .tl-gate {
+  position: absolute; left: 40px; right: 0; z-index: 1; pointer-events: none;
+  background: repeating-linear-gradient(-45deg, rgba(255,100,28,.3) 0 5px, rgba(255,100,28,.07) 5px 10px);
+}
+#v-review .tl-handle { position: absolute; left: 0; right: 0; height: 24px; margin-top: -12px; z-index: 4; border: 0; background: transparent; cursor: ns-resize; padding: 0;
+}
+#v-review .tl-handle::before { content: ''; position: absolute; left: 40px; right: 0; top: 50%; height: 3px; margin-top: -1.5px; border-radius: 2px; background: var(--orange-hot); box-shadow: 0 0 10px rgba(255,100,28,.7);
+}
+#v-review .tl-handle::after {
+  content: attr(data-label); position: absolute; left: 0; top: 50%; translate: 0 -50%; font-size: 11px; font-weight: 700; color: #fff; line-height: 1;
+  background: var(--orange); border-radius: 999px; padding: 4px 7px;
+}
+#v-review .tl-handle:hover::before, #v-review .tl-handle.drag::before { background: #fff; box-shadow: 0 0 12px #fff;
+}
+#v-review .tl-head { position: absolute; left: 40px; right: 0; height: 2px; margin-top: -1px; background: #fff; z-index: 3; pointer-events: none; box-shadow: 0 0 8px rgba(255,255,255,.8);
+}
+#v-review .tl-readout { position: absolute; left: 0; z-index: 5; transform: translateY(-50%); background: #fff; color: #000; font-weight: 700; font-size: 11px; padding: 2px 6px; border-radius: 6px; pointer-events: none; white-space: nowrap;
+}
+#v-review .slate-card { border-radius: var(--radius); background: var(--ink-2); border: 1px solid var(--line); overflow: hidden; margin-bottom: 14px;
+}
+#v-review .clap { height: 20px; background: repeating-linear-gradient(-45deg, #f4f4f4 0 14px, #0a0a14 14px 28px);
+}
+#v-review .slate-head { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--line);
+}
+#v-review .slate-head div { padding: 12px 14px; border-right: 1px solid var(--line); min-width: 0;
+}
+#v-review .slate-head div:last-child { border-right: 0;
+}
+#v-review .slate-head small { display: block; color: var(--text-3); font-size: 12px; font-weight: 600;
+}
+#v-review .slate-head b { font: 800 26px/1.1 var(--display); letter-spacing: -.02em; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#v-review .times { display: grid; grid-template-columns: repeat(3, 1fr);
+}
+#v-review .times div { padding: 12px 14px; border-right: 1px solid var(--line);
+}
+#v-review .times div:last-child { border-right: 0;
+}
+#v-review .times small { display: block; color: var(--text-3); font-size: 12px; font-weight: 600;
+}
+#v-review .times b { font: 700 22px/1.15 var(--display); letter-spacing: -.01em;
+}
+#v-review .times .len.ok b { color: var(--keep);
+}
+#v-review .times .len.bad b { color: var(--pass);
+}
+#v-review .times-foot { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px 12px; color: var(--text-3); font-size: 12.5px;
+}
+#v-review .link-btn { background: none; border: 0; color: var(--orange-hot); font-weight: 600; padding: 0; text-decoration: underline; text-underline-offset: 3px;
+}
+#v-review .rules { list-style: none; margin: 0; padding: 4px 14px 14px; display: grid; gap: 7px;
+}
+#v-review .rules li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; align-items: start; font-size: 13.5px; color: var(--text-2);
+}
+#v-review .rules svg { width: 18px; height: 18px; margin-top: 1px;
+}
+#v-review .rules .ok svg { color: var(--keep);
+}
+#v-review .rules .bad svg { color: var(--pass);
+}
+#v-review .rules .bad { color: var(--text);
+}
+#v-review .verdicts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px;
+}
+#v-review .verdict {
+  display: grid; gap: 6px; justify-items: start; padding: 12px 14px; border-radius: var(--radius); border: 1px solid var(--line-2); background: var(--ink-2);
+  font: 700 18px/1 var(--display); transition: transform .15s var(--ease), background .15s, border-color .15s;
+}
+#v-review .verdict:hover { transform: translateY(-2px); background: var(--ink-3);
+}
+#v-review .verdict.keep.on { background: rgba(65,255,106,.14); border-color: var(--keep); box-shadow: 0 0 22px -6px rgba(65,255,106,.7);
+}
+#v-review .verdict.trim.on { background: rgba(248,197,67,.14); border-color: var(--trim); box-shadow: 0 0 22px -6px rgba(248,197,67,.7);
+}
+#v-review .verdict.pass.on { background: rgba(255,90,100,.14); border-color: var(--pass); box-shadow: 0 0 22px -6px rgba(255,90,100,.7);
+}
+#v-review .verdict kbd { margin-top: 2px;
+}
+#v-review .slate-sec { padding: 14px 16px; border-bottom: 1px solid var(--line);
+}
+#v-review .slate-sec:last-child { border-bottom: 0;
+}
+#v-review .slate-sec h2 { font: 700 15px/1.2 var(--display); margin-bottom: 8px;
+}
+#v-review .quote { font-size: 14.5px; line-height: 1.5; color: var(--text);
+}
+#v-review .quote + .quote { margin-top: 6px;
+}
+#v-review .quote em { color: var(--text-3); font-style: normal; font-weight: 600; font-size: 12.5px; margin-right: 6px;
+}
+#v-review .muted { color: var(--text-2); font-size: 14px;
+}
+#v-review .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
+}
+#v-review .tag { border-radius: 999px; padding: 3px 10px; font-size: 12.5px; font-weight: 600; background: var(--ink-4); color: var(--text-2);
+}
+#v-review .tag.good { background: rgba(65,255,106,.14); color: var(--keep);
+}
+#v-review .tag.warn { background: rgba(248,197,67,.14); color: var(--trim);
+}
+#v-review .tag.bad { background: rgba(255,90,100,.14); color: var(--pass);
+}
+#v-review .others { display: flex; flex-wrap: wrap; gap: 6px;
+}
+#v-review .blind-note { padding: 14px 16px; color: var(--text-2); font-size: 14px;
+}
+#v-review .blind-note b { color: var(--text);
+}
+#v-review .toast {
+  position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 30px); opacity: 0; z-index: 50; pointer-events: none;
+  background: #fff; color: #000; font-weight: 600; border-radius: 999px; padding: 10px 20px; transition: all .3s var(--ease);
+}
+#v-review .toast.on { opacity: 1; transform: translate(-50%, 0);
+}
+#v-review .help { border: 1px solid var(--line-2); background: var(--ink-2); color: var(--text); border-radius: 20px; padding: 26px 30px; width: min(440px, 92vw);
+}
+#v-review .help::backdrop { background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+}
+#v-review .help h2 { font: 800 24px/1 var(--display); margin-bottom: 14px;
+}
+#v-review .help dl { display: grid; gap: 10px; margin-bottom: 20px;
+}
+#v-review .help dl div { display: grid; grid-template-columns: 120px 1fr; gap: 12px; align-items: baseline;
+}
+#v-review .help dt { font-weight: 700;
+}
+#v-review .help dd { color: var(--text-2);
+}
+#v-review.theatre .strip, #v-review.theatre .feed, #v-review.theatre .slate, #v-review.theatre .timeline-card { display: none;
+}
+#v-review.theatre .room { grid-template-columns: 1fr;
+}
+#v-review.theatre .stage { --ph: min(calc(100vh - 150px), 900px);
+}
+@media (max-width: 1360px) {
+  #v-review .room { grid-template-columns: minmax(250px, 290px) minmax(0, 1fr) minmax(300px, 350px); gap: 16px;
+  }
+}
+@media (max-width: 1180px) {
+  #v-review .view.on, #v-review #v-review.on { display: block; overflow: visible;
+  }
+  #v-review .nav { order: 5; width: 100%; overflow-x: auto;
+  }
+  #v-review .bar { flex-wrap: wrap;
+  }
+  #v-review .room { grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  }
+  #v-review .feed { grid-column: 1 / -1; order: 3; max-height: none; overflow: visible; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0 12px;
+  }
+  #v-review .feed .rail-title { grid-column: 1 / -1;
+  }
+  #v-review .stage { overflow: visible;
+  }
+  #v-review .slate { overflow: visible;
+  }
+}
+@media (max-width: 760px) {
+  #v-review .show { display: none;
+  }
+  #v-review .bar { flex-wrap: wrap; gap: 10px; padding: 10px 14px;
+  }
+  #v-review .bar-actions { gap: 8px; flex-wrap: wrap;
+  }
+  #v-review .room { grid-template-columns: minmax(0, 1fr); padding: 14px;
+  }
+  #v-review .room > * { min-width: 0;
+  }
+  #v-review .strip-scroll { padding: 10px 14px;
+  }
+  #v-review .stage { --ph: min(50vh, 400px); column-gap: 10px; justify-content: center;
+  }
+  #v-review .timeline-card { width: 112px; padding: 10px 8px;
+  }
+  #v-review .timeline-hint { display: none;
+  }
+  #v-review .tl-col.d { left: 36px; width: 32px;
+  }
+  #v-review .tl-col.a { left: 72px; width: 12px;
+  }
+  #v-review .tl-col.c { left: 88px; width: 4px;
+  }
+  #v-review .tl-col.e { display: none;
+  }
+  #v-review .tl-band, #v-review .tl-gate, #v-review .tl-head { left: 32px;
+  }
+  #v-review .tl-handle::before { left: 32px;
+  }
+  #v-review .tl-shade { left: 0;
+  }
+  #v-review .verdicts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
+  }
+  #v-review .verdict { padding: 10px; font-size: 16px;
+  }
+  #v-review .slate-head b { font-size: 20px;
+  }
+  #v-review .times b { font-size: 17px;
+  }
+  #v-review .progress span { display: none;
+  }
+  #v-review .transport { flex-wrap: wrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #v-review .orb { animation: none;
+  }
+  #v-review .intro-lede, #v-review .intro-title, #v-review .intro-sub, #v-review .intro-actions { opacity: 1;
+  }
+  #v-review .intro-blade { transform: scaleX(1);
+  }
+}
+#v-review .intro-brand { position: absolute; z-index: 3; top: clamp(20px, 4vh, 44px); left: clamp(24px, 7vw, 120px); display: flex; align-items: center; gap: 14px;
+}
+#v-review .intro-brand .brand-name { font-size: 28px;
+}
+#v-review .intro-brand { opacity: 0; animation: rise .8s .35s var(--ease) forwards;
+}
+#v-review .nav { display: flex; gap: 2px; margin-left: 10px;
+}
+#v-review .nav a {
+  color: var(--text-2); text-decoration: none; font-weight: 600; padding: 8px 14px; border-radius: 999px; white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+#v-review .nav a:hover { background: rgba(255,255,255,.07); color: #fff;
+}
+#v-review .nav a.on { background: var(--orange-soft); color: #fff; box-shadow: inset 0 0 0 1px var(--orange);
+}
+#v-review .bar .show { margin-left: 4px;
+}
+#v-review .only-review { display: none !important;
+}
+#v-review .views { min-height: 0;
+}
+#v-review .view { display: none; height: 100%; min-height: 0;
+}
+#v-review .view.on { display: block; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--ink-4) transparent;
+}
+#v-review .nav a small { font-weight: 600; color: var(--text-3); margin-left: 4px; font-size: 11px;
+}
+#v-review .nav a.on small { color: var(--text-2);
+}
+#v-review .views { min-height: 0;
+}
+#v-review .view { height: 100%; min-height: 0;
+}
+#v-review #v-review { display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden;
+}
+#v-review .optional-note { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 10px 24px; background: rgba(248,197,67,.06); border-bottom: 1px solid var(--line);
+}
+#v-review .optional-note .tag-opt { font-weight: 700; font-size: 12px; color: var(--gold); border: 1px solid var(--gold); border-radius: 999px; padding: 2px 10px;
+}
+#v-review .optional-note p { color: var(--text-2); font-size: 14px; max-width: 110ch; flex: 1 1 420px;
+}
+#v-review .optional-note .pill { padding: 6px 14px; font-size: 13px;
+}
+
+#v-review.on { display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }
+#v-review .optional-note { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px clamp(16px, 4vw, 48px); background: rgba(248,197,67,.06); border-bottom: 1px solid var(--line); }
+#v-review .tag-opt { font-weight: 700; font-size: 12px; color: var(--gold); border: 1px solid var(--gold); border-radius: 999px; padding: 2px 10px; }
+#v-review .optional-note p { color: var(--text-2); font-size: 14px; max-width: 110ch; flex: 1 1 420px; }
+#v-review .optional-note .pill { padding: 6px 14px; font-size: 13px; }
+#v-review .room { min-height: 0; height: 100%; }
+/* the story card: the promo in three beats */
+#v-review .story { list-style: none; margin: 14px 0 0; padding: 0 0 0 18px; position: relative; display: grid; gap: 12px; }
+#v-review .story::before { content: ''; position: absolute; left: 4px; top: 8px; bottom: 8px; width: 2px; background: linear-gradient(var(--orange-hot), rgba(255,100,28,.15)); }
+#v-review .story li { position: relative; }
+#v-review .story li::before { content: ''; position: absolute; left: -18px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--ink-1); border: 2px solid var(--orange-hot); }
+#v-review .story li:last-child::before { background: var(--orange-hot); }
+#v-review .story small { display: block; font-size: 11px; font-weight: 700; color: var(--orange-hot); }
+#v-review .story p { font-size: 14px; color: var(--text); line-height: 1.35; }
+#v-review .story-log { color: var(--text-3); font-size: 13px; margin-top: 10px; }

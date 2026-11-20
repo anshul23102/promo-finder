@@ -48,9 +48,11 @@ const trimFor = tk => { const s = saved[tk.id], w = win(tk); return s && s.in !=
 const isTrimmed = tk => { const t = trimFor(tk), w = win(tk); return t.in !== w.start || t.out !== w.end; };
 const P = { playing: false, t: 0, speed: 1, last: 0, ended: false, cutTimer: 0, chan: {}, typed: null };
 const E = {};
-['app', 'phone', 'screen', 'gateArc', 'shotTag', 'gateTag', 'narr', 'sub', 'subWho', 'subLine', 'sfx', 'cutScreen', 'cutQuestion',
+['phone', 'screen', 'gateArc', 'shotTag', 'gateTag', 'narr', 'sub', 'subWho', 'subLine', 'sfx', 'cutScreen', 'cutQuestion',
   'peekBtn', 'replayBtn', 'cutPeek', 'playBtn', 'restartBtn', 'clock', 'clockTotal', 'speedBtn', 'theatreBtn', 'timeline', 'timelineHint',
-  'feed', 'slate', 'toast', 'dlCsv', 'dlJson', 'progress'].forEach(id => { E[id] = document.getElementById(id); });
+  'feed', 'slate', 'toast', 'progress'].forEach(id => { E[id] = document.getElementById(id); });
+E.app = document.getElementById('v-review');
+E.dlCsv = document.getElementById('rvCsv'); E.dlJson = document.getElementById('rvJson');
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const sortedTakes = () => D.takes.slice().sort((a, b) => a.rank - b.rank);
 const shotWords = t => t.split(/\s+(?:on|of|as|from|showing|following|tracking|toward|towards|between|with|over|past|at|that)\b/i);
@@ -229,6 +231,12 @@ function setTrim(tk, tr, which) {
   const inB = $('#tIn', E.slate), outB = $('#tOut', E.slate);
   if (inB) { inB.textContent = fmt(tr.in); outB.textContent = fmt(tr.out); }
 }
+function storyBeats(tk, tr) {                       // the promo as a tiny story: how it opens, what turns, where it stops
+  const w = win(tk), mid = (tr.in + tr.out) / 2;
+  const dl = w.cues.filter(c => c.k === 'd' && c.s >= tr.in && c.e <= tr.out);
+  const turn = dl.length ? dl.reduce((b, c) => Math.abs(c.s - mid) < Math.abs(b.s - mid) ? c : b) : null;
+  return [['Hook', openingText(tk)], ['Turn', turn ? (turn.who ? turn.who + ': ' : '') + turn.text : ''], ['Cliffhanger', tk.ai.cliff || '']].filter(b => b[1]);
+}
 function renderSlate() {
   const tk = take(), w = win(tk), tr = trimFor(tk), len = (tr.out - tr.in) / 100, items = checks(w, tr), s = saved[tk.id] || {};
   const verdict = (d, label, key) => `<button class="verdict ${d} ${s.d === d ? 'on' : ''}" data-d="${d}" aria-pressed="${s.d === d}">${label}<kbd>${key}</kbd></button>`;
@@ -236,13 +244,15 @@ function renderSlate() {
   const v = tk.ai.viewer || {};
   const chip = (txt, cls) => txt ? `<span class="tag ${cls}">${esc(txt)}</span>` : '';
   const nth = cur + 1;
+  const beats = storyBeats(tk, tr), log = (D.episodes.find(e => e.n === tk.episode) || {}).logline;
+  const story = `<div class="slate-sec"><h2>The story in three beats</h2><ol class="story">${beats.map(([k, t]) => `<li><small>${k}</small><p>${esc(t)}</p></li>`).join('')}</ol>${log ? `<p class="story-log">Episode ${tk.episode}: ${esc(log)}</p>` : ''}</div>`;
   let html = `<div class="slate-card"><div class="clap"></div>
     <div class="slate-head"><div><small>Episode</small><b>${tk.episode}</b></div><div><small>${ui.blind ? 'Promo' : 'Rank'}</small><b>${ui.blind ? nth : tk.rank}</b></div><div><small>${ui.blind ? 'Of' : 'Post'}</small><b>${ui.blind ? order.length : esc(({ post_first: 'First', library: 'Library', hold_back: 'Held', alternate: 'Alt' })[tk.plan] || '')}</b></div></div>
     <div class="times"><div><small>In</small><b id="tIn">${fmt(tr.in)}</b></div><div><small>Out</small><b id="tOut">${fmt(tr.out)}</b></div><div class="len ${items[0].ok ? 'ok' : 'bad'}"><small>Length</small><b>${len.toFixed(1)} s</b></div></div>
     <div class="times-foot"><span>${isTrimmed(tk) ? 'You moved the cut points.' : 'Original cut from the tool.'}</span>${isTrimmed(tk) ? '<button class="link-btn" id="resetTrim" type="button">Reset to original</button>' : ''}</div>
     <ul class="rules">${items.map(i => `<li class="${i.ok ? 'ok' : 'bad'}">${i.ok ? ICON.ok : ICON.bad}<span>${esc(i.text)}</span></li>`).join('')}</ul></div>
     <div class="verdicts">${verdict('keep', 'Keep', 'K')}${verdict('trim', 'Trim', 'T')}${verdict('pass', 'Pass', 'P')}</div>
-    <div class="slate-card">
+    <div class="slate-card">${story}
       <div class="slate-sec"><h2>What opens it</h2><p class="quote">${esc(openingText(tk))}</p></div>
       <div class="slate-sec"><h2>Where it ends</h2>${lastLines.map(l => `<p class="quote">${esc(l)}</p>`).join('') || '<p class="muted">The last lines before the cut.</p>'}</div>`;
   if (ui.blind) {
@@ -366,7 +376,8 @@ function wire() {
   E.dlCsv.addEventListener('click', () => downloadHandoff('csv'));
   E.dlJson.addEventListener('click', () => downloadHandoff('json'));
   document.addEventListener('keydown', ev => {
-    if (EMPTY || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    if (EMPTY || ev.metaKey || ev.ctrlKey || ev.altKey || !E.app.classList.contains('on')) return;
+    if (ev.target.closest && ev.target.closest('input, textarea, select')) return;
     if (ev.target.closest && ev.target.closest('.tl-handle') && (ev.key === 'ArrowUp' || ev.key === 'ArrowDown')) return;
     const k = ev.key.toLowerCase();
     if (k === ' ') { ev.preventDefault(); P.playing ? stop() : start(); }
@@ -384,19 +395,17 @@ function wire() {
   });
 }
 
-function init() {
-  document.getElementById('showTitle').textContent = D.show.title;
-  if (D.show.demo) document.getElementById('demoPill').hidden = false;
-  document.title = 'Review (optional) \u00b7 ' + D.show.title + ' \u00b7 Promo Finder';
+let started = false;
+function start(id) {
   if (EMPTY) {
-    document.getElementById('room').innerHTML = '<div style="padding:40px"><h1>Nothing to review yet</h1><p class="muted">No promo passed the checks in this run. <a href="../#/promos">Back to the promos</a></p></div>';
+    document.getElementById('room').innerHTML = '<div style="padding:40px"><h1>Nothing to review yet</h1><p class="muted">No promo passed the checks in this run.</p></div>';
     return;
   }
-  buildOrder(); renderFeed(); renderProgress(); wire();
-  const want = decodeURIComponent((location.hash || '').replace(/^#\/?/, ''));             // review/#P003 opens that promo
-  const at = order.findIndex(di => D.takes[di].id === want);
+  if (!started) { started = true; buildOrder(); renderFeed(); renderProgress(); wire(); }
+  const at = id ? order.findIndex(di => D.takes[di].id === id) : -1;
   const firstOpen = order.findIndex(di => !(saved[D.takes[di].id] && saved[D.takes[di].id].d));
-  go(at >= 0 ? at : Math.max(0, firstOpen), at >= 0);
+  go(at >= 0 ? at : (started && cur ? cur : Math.max(0, firstOpen)), at >= 0);
 }
-init();
+window.PromoReview = { start, stop };
+window.dispatchEvent(new Event('promo-review-ready'));
 })();

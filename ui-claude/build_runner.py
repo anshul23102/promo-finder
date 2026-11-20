@@ -2,7 +2,7 @@
 
     python3 ui-claude/build_runner.py --site <built site> --runtime <unpacked pyodide npm package> --release <short commit>
 
-Writes <site>/run/: the runner page, a module worker, the pinned Pyodide runtime (unmodified), the promo/ package as one
+Writes <site>/run/: a module worker (the Run it tab of the page drives it), the pinned Pyodide runtime (unmodified), the promo/ package as one
 content-hashed zip, a bundled synthetic example or two, view.html (the same review page, fed from memory) and version.json.
 Every file the page loads carries a content hash in its name, so a cached page can never mix versions.
 Deterministic: the same inputs give byte-identical output.
@@ -84,15 +84,10 @@ def main():
     worker = (HERE / "runner" / "worker.js").read_text(encoding="utf-8")
     worker = (worker.replace("__RUNTIME__", f"runtime/pyodide-{version}/").replace("__ENGINE__", engine_name).replace("__ENGINE_SHA__", sha(engine)))
     worker_name = hashed(out, "worker.js", worker.encode())
-    runner_js = (HERE / "runner" / "runner.js").read_text(encoding="utf-8").replace("__WORKER__", worker_name)
-    js_name = hashed(out, "runner.js", runner_js.encode())
-    css_name = hashed(out, "runner.css", (HERE / "runner" / "runner.css").read_bytes())
     boot_name = hashed(out, "bootstrap.js", (HERE / "runner" / "bootstrap.js").read_bytes())
 
-    page = (HERE / "runner" / "runner.html").read_text(encoding="utf-8")
-    page = page.replace("__RUNNER_JS__", js_name).replace("__RUNNER_CSS__", css_name)
-    page = page.replace("</main>", f'</main>\n<footer class="r-foot">Version {args.release}. Runs Pyodide {version} (Python {python}) in your browser.</footer>', 1)
-    (out / "index.html").write_text(page, encoding="utf-8")
+    # old links to run/ land on the Run it tab of the single page
+    (out / "index.html").write_text('<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=../#/run"><title>Run it</title><a href="../#/run">Run it</a>', encoding="utf-8")
 
     app_hash = sha((HERE / "app.js").read_bytes())[:10]
     css_hash = sha((HERE / "app.css").read_bytes())[:10]
@@ -113,15 +108,9 @@ def main():
             write_zip(out / "examples" / f"{folder.name}.zip", files)
             examples.append(f"{folder.name}.zip")
 
-    index = args.site / "index.html"
-    html = index.read_text(encoding="utf-8")
-    tag = '<section class="band split" id="runHere" hidden>'
-    if tag in html:
-        index.write_text(html.replace(tag, tag.replace(" hidden", ""), 1), encoding="utf-8")
-
     listing = {str(p.relative_to(out)): {"bytes": p.stat().st_size, "sha256": sha(p.read_bytes())} for p in sorted(out.rglob("*")) if p.is_file()}
     (out / "version.json").write_text(json.dumps({
-        "release": args.release, "pyodide": version, "python": python, "engine": engine_name, "engine_sha256": sha(engine),
+        "release": args.release, "worker": worker_name, "pyodide": version, "python": python, "engine": engine_name, "engine_sha256": sha(engine),
         "formats": [".txt", ".zip of .txt"], "limits": {"input_mb": 25, "episodes": 200, "episode_mb": 5, "unpacked_mb": 60},
         "examples": examples, "files": listing}, indent=1), encoding="utf-8")
     total = sum(v["bytes"] for v in listing.values())
