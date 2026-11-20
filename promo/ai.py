@@ -129,9 +129,18 @@ def clip_text(cut: Cut, episodes: dict[int, Episode], names: dict) -> str:
     return "\n".join(parts)
 
 
-def viewer(model: Model, cut: Cut, episodes) -> dict:
+SKEPTIC_SYSTEM = VIEWER_SYSTEM + """
+
+You are the SECOND reader. The first reader was easily impressed and a model from the same family wrote the clip's score, so
+be the bored, skeptical scroller who has seen thousands of these. Say "stop" only for a concrete shock you could understand
+with no context. Say "softened" or "resolved" if the clip gives any answer, reaction or comfort at the end. If you needed
+anything explained, answer "mostly" or "no". When unsure between two answers, pick the weaker one."""
+
+
+def viewer(model: Model, cut: Cut, episodes, skeptic: bool = False) -> dict:
     # Full-show aliases can reveal information that was hidden inside this clip.
-    return model.ask("viewer", VIEWER_SYSTEM, clip_text(cut, episodes, {}), VIEWER_SCHEMA, max_tokens=800)
+    return model.ask("viewer-skeptic" if skeptic else "viewer", SKEPTIC_SYSTEM if skeptic else VIEWER_SYSTEM,
+                     clip_text(cut, episodes, {}), VIEWER_SCHEMA, max_tokens=800)
 
 
 def passes(view: dict) -> tuple[bool, str]:

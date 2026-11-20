@@ -54,14 +54,15 @@ python3 -m promo path/to/scripts.zip --model groq:openai/gpt-oss-120b --judge gr
     --episodes 1-12                                              # Groq free plan (switch on Zero Data Retention first)
 ```
 
-**Hosted free models on made-up or public scripts only.** Google's unpaid Gemini tier says not to submit confidential information ([terms](https://ai.google.dev/gemini-api/terms)), so use it only on `examples/`:
+**Gemini (free tier), the model behind the published answer.** Google's unpaid Gemini tier says not to submit confidential information ([terms](https://ai.google.dev/gemini-api/terms)). The applicant ran the Kuku pack through it anyway and says so in the solution document; for real work use an endpoint Kuku approves. The exact command of the final answer (all 50 episodes, every clip read twice, joined promos tried):
 
 ```bash
 cp .env.example .env          # add a free GEMINI_API_KEY from https://aistudio.google.com/apikey
-python3 -m promo examples/the-last-edition --model gemini --judge "gemini:gemma-4-26b-a4b-it|gemini-3.1-flash-lite"
+python3 -m promo path/to/scripts.zip --model gemini --judge gemini:gemini-3.1-flash-lite --votes 2 --joins --rank-top 12 --rounds 3
+python3 -m promo examples/the-last-edition --model gemini --judge gemini:gemini-3.1-flash-lite --votes 2 --joins     # the same, on the made-up show
 ```
 
-With no `--model` the run uses the rules only (no AI, nothing leaves your computer). With a model, each shortlisted promo also gets one extra call that writes a single sentence on why it works from the clip itself (`--no-why` skips it and quotes the clip instead). The **hook** shown everywhere is what is on screen in the first 3 seconds, not a model's paraphrase.
+`--votes 2` makes the judge read every clip a second time as a stricter reader (both readings must pass); `--joins` also tries promos that join a few moments. With no `--model` the run uses the rules only (no AI, nothing leaves your computer). With a model, each shortlisted promo also gets one extra call that writes a single sentence on why it works from the clip itself (`--no-why` skips it and quotes the clip instead). The **hook** shown everywhere is what is on screen in the first 3 seconds, not a model's paraphrase.
 
 Swap models with one flag (`a|b` is a fallback chain; an overloaded model is skipped for 5 minutes): `--model groq`, `--model openrouter:<model>`, `--model openai:<model>`, or any OpenAI-compatible endpoint with `--model openai-compatible:<model>` plus `PROMO_BASE_URL` and `PROMO_API_KEY`. Recovery tries alternate cuts for episodes with no passing pick. Each run includes a per-episode coverage ledger and a review candidate where a valid alternate exists. Use `--no-recover` to skip the extra model calls or `--rounds 0` to rank by the viewer rubric without the tournament. On Groq's free plan each model gets 8K tokens a minute and 200K a day; one episode costs about 7.5K tokens to score, so run about 25 episodes a day (`--episodes`) and repeat: cached episodes cost nothing. The client paces itself, and stops with a clear message instead of sleeping when a daily cap is hit. Every model answer is cached, so a re-run after a crash or rate limit resumes for free.
 
@@ -71,7 +72,7 @@ Browser version (no install): the **Run it** tab of the live page takes a ZIP, a
 
 Outputs land in `private/runs/<time>/`: `index.html` (the same results page as the live demo, opens offline, with `data.js` and its assets next to it), `posting_plan.md`, `promos.csv`, `promos.json`, `evaluation.md`, `coverage.json`, `cutlist.edl`, `show_guide.json`, `rejected.json`, `ranking.json`, `model_calls.jsonl` (every raw model reply).
 
-A person's keep/trim/pass file (the Review tab's handoff CSV) can be scored against a run: `python3 -m promo <scripts.zip> --review "handoff.csv|human|Name"`.
+A person's ratings of an older run can be applied to a newer one with `python3 tools/map_ratings.py OLD_RUN RATINGS.csv NEW_RUN` (a rated cut counts when the new run contains the same moment). A person's keep/trim/pass file (the Review tab's handoff CSV) can be scored against a run: `python3 -m promo <scripts.zip> --review "handoff.csv|human|Name"`.
 
 Tests: `python3 -m unittest discover -s tests`
 

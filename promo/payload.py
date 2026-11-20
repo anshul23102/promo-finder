@@ -107,6 +107,7 @@ def build_payload(run: Path, episodes: dict, *, reviews: list | None = None, bea
         "coverage": ev.get("coverage", {}), "rejections": ev.get("rejections", {}),
         "viewer": {"ai": ev_ab.get("ai_editor"), "rules": ev_ab.get("rules")},
         "judge": {k: ev.get("judge", {}).get(k) for k in ("comparisons", "repeat_pair_agreement", "average_place_by_slot")},
+        "ratings": (json.loads((run / "ratings_applied.json").read_text(encoding="utf-8")) if (run / "ratings_applied.json").is_file() else None),
         "reviews": [{"id": r["id"], "kind": r["kind"], **{k: (ev_rev.get("all") or {}).get(k) for k in ("n", "keep", "trim", "pass")}}
                     for r in reviews for ev_rev in [next((x for x in ev.get("reviews", []) if x.get("reviewer") == r["name"]), next((x for x in ev.get("reviews", []) if x.get("kind") == r["kind"]), {}))]],
     }
@@ -146,7 +147,7 @@ def build_payload(run: Path, episodes: dict, *, reviews: list | None = None, bea
         "ai": ai_run, "finder": summary.get("finder", ""), "pack": len(episodes), "requested": summary.get("episodes"),
         "scored": len(pulses([run], episodes)) if ai_run and summary.get("finder") == "beats" else None,   # this run's own beat scores only, not older runs shown on the strip
         "candidates": summary.get("candidates"), "judged": viewed if ai_run else None, "shortlisted": summary.get("passed", len(takes)),
-        "warnings": list(summary.get("warnings") or []), "filled": filled,
+        "warnings": list(summary.get("warnings") or []), "filled": filled, "joins": summary.get("joins"), "votes": summary.get("votes"),
     }
     payload = {
         "run": run, "coverage": coverage,

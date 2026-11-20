@@ -245,7 +245,8 @@ function renderSlate() {
   const chip = (txt, cls) => txt ? `<span class="tag ${cls}">${esc(txt)}</span>` : '';
   const nth = cur + 1;
   const beats = storyBeats(tk, tr), log = (D.episodes.find(e => e.n === tk.episode) || {}).logline;
-  const story = `<div class="slate-sec"><h2>The story in three beats</h2><ol class="story">${beats.map(([k, t]) => `<li><small>${k}</small><p>${esc(t)}</p></li>`).join('')}</ol>${log ? `<p class="story-log">Episode ${tk.episode}: ${esc(log)}</p>` : ''}</div>`;
+  const joinNote = tk.segments.length > 1 ? `<p class="story-log"><b>Joined promo.</b> It joins ${tk.segments.length} moments: ${tk.segments.map(sg => `episode ${sg.episode} ${fmt(sg.start)} to ${fmt(sg.end)}`).join(', then ')}. Review plays and trims the first; the others are listed here.</p>` : '';
+  const story = `<div class="slate-sec"><h2>The story in three beats</h2><ol class="story">${beats.map(([k, t]) => `<li><small>${k}</small><p>${esc(t)}</p></li>`).join('')}</ol>${log ? `<p class="story-log">Episode ${tk.episode}: ${esc(log)}</p>` : ''}${joinNote}</div>`;
   let html = `<div class="slate-card"><div class="clap"></div>
     <div class="slate-head"><div><small>Episode</small><b>${tk.episode}</b></div><div><small>${ui.blind ? 'Promo' : 'Rank'}</small><b>${ui.blind ? nth : tk.rank}</b></div><div><small>${ui.blind ? 'Of' : 'Post'}</small><b>${ui.blind ? order.length : esc(({ post_first: 'First', library: 'Library', hold_back: 'Held', alternate: 'Alt' })[tk.plan] || '')}</b></div></div>
     <div class="times"><div><small>In</small><b id="tIn">${fmt(tr.in)}</b></div><div><small>Out</small><b id="tOut">${fmt(tr.out)}</b></div><div class="len ${items[0].ok ? 'ok' : 'bad'}"><small>Length</small><b>${len.toFixed(1)} s</b></div></div>

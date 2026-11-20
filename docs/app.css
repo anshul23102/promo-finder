@@ -151,6 +151,7 @@ code { font: 600 .9em ui-monospace, 'SF Mono', Menlo, monospace; background: var
 .promo header { display: flex; align-items: baseline; gap: 10px; padding: 14px 18px 0; font-size: 13px; color: var(--text-2); }
 .rank { font: 800 28px/1 var(--display); color: hsl(var(--h, 22) 100% 62%); letter-spacing: -.03em; }
 .where { flex: 1; min-width: 0; font-weight: 600; }
+.promo header .tag { font-size: 11px; padding: 2px 8px; }
 .len { color: var(--text-3); white-space: nowrap; }
 .open { padding: 14px 18px 30px; background: linear-gradient(180deg, hsl(var(--h, 22) 80% 45% / .24), hsl(var(--h, 22) 80% 45% / .03)); }
 .promo small { display: block; font-size: 12px; font-weight: 700; color: var(--orange-hot); margin-bottom: 4px; }

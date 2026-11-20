@@ -1,10 +1,10 @@
 {
- "release": "5fd36dc",
- "worker": "worker.1585c4e340.js",
+ "release": "38d68e5",
+ "worker": "worker.3daa296e8e.js",
  "pyodide": "0.29.5",
  "python": "3.13.2",
- "engine": "engine.0a72792b74.zip",
- "engine_sha256": "0a72792b74000f628d810d0b5aa58933309cbd69d723f66971e7458bbfcf624f",
+ "engine": "engine.4b3261ea0d.zip",
+ "engine_sha256": "4b3261ea0d926086aa20cf15cba7972f198fd3c752557df713b6d20933662358",
  "formats": [
   ".txt",
   ".zip of .txt"
@@ -24,9 +24,9 @@
    "bytes": 214,
    "sha256": "1aba02221f8c938bb249f64fa16572ed997b9fb4bd9792cd6a52b68016c7e452"
   },
-  "engine.0a72792b74.zip": {
-   "bytes": 54530,
-   "sha256": "0a72792b74000f628d810d0b5aa58933309cbd69d723f66971e7458bbfcf624f"
+  "engine.4b3261ea0d.zip": {
+   "bytes": 55272,
+   "sha256": "4b3261ea0d926086aa20cf15cba7972f198fd3c752557df713b6d20933662358"
   },
   "examples/last-edition.zip": {
    "bytes": 1314,
@@ -65,12 +65,12 @@
    "sha256": "831fd1e535084b972f87c6a35275de3d236efd5166f5e77ce89497710635e73c"
   },
   "view.html": {
-   "bytes": 13981,
-   "sha256": "b07cb34b5d83ceabc178fc6b6a8a99c06492c1e383df433751071a010c14e6e9"
+   "bytes": 13977,
+   "sha256": "0a0a11090f3b6910177c383809f79bdd5f9464a307ee6097d62e8925b4b16f54"
   },
-  "worker.1585c4e340.js": {
+  "worker.3daa296e8e.js": {
    "bytes": 4725,
-   "sha256": "1585c4e340594c19f63ca6e5ee4f7ffe9c0ba4ebfece57760c9c44dcdbe21920"
+   "sha256": "3daa296e8e6c468465e34f7c73b0cf5f881d404b883ad7e19ccf14a444ad82a4"
   }
  }
 }

@@ -230,6 +230,8 @@ class Model:
                     "response_format": {"type": "json_schema", "json_schema": {"name": stage, "schema": fmt, "strict": self.provider != "gemini"}}}
             if self.provider != "gemini":
                 body["seed"] = seed
+            elif "lite" not in self.name and self.name.startswith("gemini-"):
+                body["reasoning_effort"] = "low"   # the full Flash models think first; a short check does not need it and would time out
             if self.provider == "groq":
                 body["max_completion_tokens"] = max(max_tokens, 6000)  # bounded, but room for a whole-episode score
                 if self.name.startswith("openai/gpt-oss"):

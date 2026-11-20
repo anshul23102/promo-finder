@@ -130,7 +130,7 @@ function scriptHtml(tk) {
 function promoHtml(tk) {
   const h = hueOf(tk.episode);
   return `<article class="promo" id="${esc(tk.id)}" style="--h:${h}">
-    <header><b class="rank">${tk.rank}</b><span class="where">${esc(segLine(tk))}</span><span class="len">${Math.round(secs(tk))} s</span></header>
+    <header><b class="rank">${tk.rank}</b><span class="where">${esc(segLine(tk))}</span>${tk.segments.length > 1 ? `<span class="tag">joins ${tk.segments.length} moments</span>` : ''}<span class="len">${Math.round(secs(tk))} s</span></header>
     <div class="open"><small>Opens on</small><q>${esc(hook(tk))}</q></div>
     <div class="cut" aria-hidden="true"></div>
     <div class="close"><small>Ends on</small><p>${esc(tk.ai.cliff || '')}</p></div>
@@ -242,8 +242,12 @@ function renderQuality() {
   const cuts = rej.filter(([k]) => !/no legal/i.test(k));
   const kept = RUN.shortlisted ?? takes.length, lost = cuts.reduce((a, [, c]) => a + c, 0), total = RUN.candidates ?? kept + lost;
   const segs = [['Kept', kept, 'keep'], ...cuts.map(([k, c]) => [k, c, 'drop'])].filter(s => s[1] > 0);
-  const human = (Q.reviews || []).find(r => r.n);
+  const rt = Q.ratings;
   const covered = cov.episodes ? `${cov.episodes_with_a_promo} of ${cov.episodes}` : `${epsWith} of ${requested}`;
+  const J = RUN.joins || {}, joinedN = takes.filter(t => t.segments.length > 1).length;
+  const joinTitle = J.tried ? (joinedN ? 'Joined promos are rare.' : 'Joined promos did not make it.') : 'Joined promos are off in this run.';
+  const joinText = J.tried ? `The model proposed ${plural(J.proposed || 0, 'join', 'joins')} of moments, in one episode or across several; ${joinedN ? `${plural(joinedN, 'promo', 'promos')} passed the same checks as the rest and ${joinedN === 1 ? 'is' : 'are'} marked on the Promos page.` : 'none passed the same checks as a continuous cut.'} Most promos are one continuous stretch, which is what the brief calls usual.`
+    : 'Promos are one continuous stretch, which the brief calls usual. Joining moments from several episodes is available with <code>--joins</code>.';
   const check = (name, big, cls, what, cant) => `<div class="check"><h3>${name}</h3><p class="check-n ${cls || ''}">${big}</p><p class="check-t">${what}<em>${cant}</em></p></div>`;
   $('#qualityPage').innerHTML = `
     <section class="hero">
@@ -262,7 +266,7 @@ function renderQuality() {
       ${check('Hard rules', EMPTY ? 'n/a' : `${Q.violations ?? 'n/a'} broken`, Q.violations ? 'bad' : 'good', `Across ${Q.promos ?? takes.length} promos: 20 to 60 seconds, a line in the first 3 seconds, no cut through a spoken line, no opening on half a sentence. Separate code re-checks every promo.`, 'Cannot show a promo is good, only that it is legal.')}
       ${check("The writers' own cliffhangers", w.labels ? `${w.hit_last_10s} of ${w.labels}` : 'n/a', '', "The scripts' continuity notes name some episode-ending cliffhangers. This counts promos that end within 10 seconds of one.", 'Cannot show a viewer would stop scrolling.')}
       ${check('Episodes covered', covered, '', `Episodes searched that ended with at least one promo.${EMBED ? '' : ' <a href="#/season">Season</a> lists the rest with the reason.'}`, 'A search of every episode is not a promo in every episode.')}
-      ${check('Posting order', 'Unchecked', '', `The order comes from the tool's own scoring. Nobody has compared it with what an editor would post first${human ? `; one person's blind check of ${human.n} cuts: keep ${human.keep}, trim ${human.trim}, pass ${human.pass}` : ''}.`, 'Treat it as a suggestion.')}
+      ${check('Posting order', rt ? 'A hint' : 'Unchecked', '', rt ? `One person's blind ratings of an earlier 17 cuts, applied to this list: ${rt.matched} of those cuts appear here (${rt.matched_keep} keep, ${rt.matched_trim} trim, ${rt.matched_pass} pass), and ${rt.kept_found} of the ${rt.kept_in_total} cuts they kept. On those cuts the order put the kept ones at an average rank of ${rt.mean_new_rank.keep ?? 'n/a'} and the one they passed at ${rt.mean_new_rank.pass ?? 'n/a'}.` : "The order comes from the tool's own scoring. Nobody has compared it with what an editor would post first.", rt ? 'One rater, one show: a hint, not proof. Treat the order as a suggestion.' : 'Treat it as a suggestion.')}
     </section>
 
     <section class="weak-band">
@@ -270,8 +274,8 @@ function renderQuality() {
       <ul class="weak">
         <li><b>It reads a script, not footage.</b> It cannot see acting, pacing or whether a face makes someone stop. Every time is only as good as the script's timing.</li>
         <li><b>The reasons are written by a model.</b> They read well and are not verified against the clip.</li>
-        <li><b>It can judge too strictly, or too kindly.</b> A cut can be rejected for an ending that answers itself when an editor would still use it, and a judge from the same provider as the scorer passes more than an independent one does.</li>
-        <li><b>One continuous stretch per promo.</b> Joining moments from several episodes is not built.</li>
+        <li><b>It can judge too strictly, or too kindly.</b> A cut can be rejected for an ending that answers itself when an editor would still use it. ${RUN.votes >= 2 ? 'Every clip is read twice, the second time by a stricter reader, and must pass both; both readers are still the same model that scored the episodes, so a different model would be a more independent judge.' : 'The judge is the same provider as the scorer, so it passes more than an independent one would.'}</li>
+        <li><b>${joinTitle}</b> ${joinText}</li>
       </ul>
       ${EMBED ? '' : '<p class="page-end"><a href="#/season">Every episode, one row: Season</a></p>'}
     </section>`;

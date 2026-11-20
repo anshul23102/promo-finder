@@ -48,6 +48,7 @@ def arguments(argv=None):
                    help="Ask the judge model for a one-sentence reason per shortlisted clip (default on; off = quote the clip instead)")
     p.add_argument("--why-model", help="A different model to write the one-line reasons (default: the judge model)")
     p.add_argument("--no-guide", action="store_true", help="Skip the whole-show read (needed when the provider caps a request below ~50k tokens, e.g. Groq free)")
+    p.add_argument("--votes", type=int, choices=(1, 2), default=1, help="2 = every clip is read twice, the second time by a stricter reader, and must pass both (the judge is less lenient)")
     p.add_argument("--joins", action="store_true", help="Also try cross-episode joined promos (off: 0 survived in testing)")
     p.add_argument("--title", help="Show name for the report")
     p.add_argument("--no-viewer", action="store_true", help="Do not write the results page (index.html) next to the files; the in-browser runner uses this")
@@ -226,6 +227,16 @@ def main(argv=None, *, key=None, base_url=None, log_fn=None):
     # 3. cold viewer -------------------------------------------------------------------------
     judge_available = bool(judge)
 
+    def ask_judge(*a, **k):
+        """A free tier times out now and then: try a few times, with a pause, before giving the judge up."""
+        for attempt in range(4):
+            try:
+                return ai.viewer(judge, *a, **k)
+            except ModelError:
+                if attempt == 3:
+                    raise
+                time.sleep(15 * (attempt + 1))
+
     def view(pool):
         nonlocal judge_available
         kept = []
@@ -236,7 +247,7 @@ def main(argv=None, *, key=None, base_url=None, log_fn=None):
                 continue
             if judge_available:
                 try:
-                    record = ai.viewer(judge, e["cut"], by_number)
+                    record = ask_judge(e["cut"], by_number)
                 except ModelError as exc:
                     judge_available = False
                     warn(f"Cold viewer unavailable ({str(exc)[:140]}). Remaining candidates require editor review.")
@@ -246,6 +257,18 @@ def main(argv=None, *, key=None, base_url=None, log_fn=None):
                 continue
             raw.append(record)
             ok, why = ai.passes(record["answer"])
+            if ok and args.votes >= 2:
+                try:
+                    second = ask_judge(e["cut"], by_number, skeptic=True)
+                    raw.append(second)
+                    e["skeptic"] = second["answer"]
+                    ok2, why2 = ai.passes(second["answer"])
+                    if not ok2:
+                        ok, why = False, "the stricter second reading: " + why2
+                except ModelError as exc:
+                    judge_available = False
+                    warn(f"The second reading is unavailable ({str(exc)[:140]}). Remaining candidates require editor review.")
+                    ok, why = False, "viewer unavailable"
             if ok and e["cut"].source == "recovery":
                 verdict = record["answer"]
                 if (verdict["first_3s"], verdict["makes_sense"], verdict["ending"]) != ("stop", "yes", "unresolved"):
@@ -280,6 +303,7 @@ def main(argv=None, *, key=None, base_url=None, log_fn=None):
                 break
 
     # 4. joined promos -----------------------------------------------------------------------
+    join_stats = {"tried": False, "proposed": 0, "kept": 0}
     if finder_available and judge_available and not editor_model.local and args.joins:
         firsts, seen = [], set()
         for e in passing:
@@ -288,11 +312,13 @@ def main(argv=None, *, key=None, base_url=None, log_fn=None):
                 firsts.append(e["cut"])
         if len(firsts) >= 2:
             log(f"Looking for stronger promos that join moments across episodes ({len(firsts)} candidates) ...")
+            join_stats["tried"] = True
             joined = []
             try:
                 record = ai.joins(editor_model, firsts[:50], by_number, notes)
                 raw.append(record)
                 joined = record["answer"]["joins"][:4]
+                join_stats["proposed"] = len(joined)
             except ModelError as exc:
                 warn(f"Join suggestions unavailable ({str(exc)[:140]}). Exporting the continuous cuts.")
             new = []
@@ -313,7 +339,9 @@ def main(argv=None, *, key=None, base_url=None, log_fn=None):
                     rejected.append({"episode": parts[0][0].number, "why_rejected": "rule: " + why, **meta})
                 else:
                     new.append({"cut": cut, "id": f"J{len(new) + 1:02d}", **meta})
-            passing += view(new)
+            viewed_new = view(new)
+            join_stats["kept"] = len(viewed_new)
+            passing += viewed_new
             entries += new
 
     # 5. ranking tournament --------------------------------------------------------------------
@@ -365,7 +393,7 @@ def main(argv=None, *, key=None, base_url=None, log_fn=None):
 
     # 6. evaluate and export -------------------------------------------------------------------
     usage = [m.usage() for m in {id(m): m for m in (editor_model, judge) if m}.values()]
-    summary = {"show": args.title or args.input.stem, "episodes": len(episodes),
+    summary = {"votes": args.votes, "joins": join_stats, "show": args.title or args.input.stem, "episodes": len(episodes),
                "cues": sum(len(e.cues) for e in episodes), "editor_model": editor_model.label if editor_model else "rules",
                "judge_model": judge.label if judge else "none", "finder": args.finder if editor_model else "rules", "candidates": len(entries), "passed": len(passing),
                "post_first": sum(e["plan"] == "post_first" for e in ordered), "usage": usage,
