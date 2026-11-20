@@ -50,6 +50,7 @@ def arguments(argv=None):
     p.add_argument("--no-guide", action="store_true", help="Skip the whole-show read (needed when the provider caps a request below ~50k tokens, e.g. Groq free)")
     p.add_argument("--joins", action="store_true", help="Also try cross-episode joined promos (off: 0 survived in testing)")
     p.add_argument("--title", help="Show name for the report")
+    p.add_argument("--no-viewer", action="store_true", help="Do not write the results page (index.html) next to the files; the in-browser runner uses this")
     p.add_argument("--review", action="append", default=[], metavar="CSV|KIND|NAME",
                    help="A person's exported ratings, e.g. 'me.csv|human|The applicant'. Repeat for more reviewers; only a person's ratings are scored")
     p.add_argument("--reviewer-name", help="Who made the --decisions ratings (default: the applicant)")
@@ -384,6 +385,9 @@ def main(argv=None, *, key=None, base_url=None, log_fn=None):
         staging = Path(temporary) / "run"
         write_all(staging, summary, notes, ordered, entries, rejected, ranking, raw, by_number, references, evaluate, all_episodes)
         os.rename(staging, out)
+    if not args.no_viewer:
+        from .viewer import write_viewer
+        write_viewer(out, by_number)
     outcome = "viewer-shortlisted cuts" if judge else "timing-checked review candidates"
     log(f"\nDone in {summary['seconds']} s. {len(passing)} {outcome}.\nOpen {(out / 'index.html').resolve()}")
     return out
@@ -392,5 +396,7 @@ def main(argv=None, *, key=None, base_url=None, log_fn=None):
 if __name__ == "__main__":
     try:
         main()
-    except (ModelError, ValueError, OSError) as exc:
+    except ModelError as exc:
         sys.exit(f"Stopped: {exc}\nFinished model answers are cached; run the same command again to resume.")
+    except (ValueError, OSError) as exc:
+        sys.exit(f"Stopped: {exc}")

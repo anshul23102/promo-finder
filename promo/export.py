@@ -10,7 +10,6 @@ from .ai import clip_text, fallback_why
 from .cuts import HOOK_WINDOW, following
 from .coverage import episode_coverage
 from .llm import save_json
-from .report import render_report
 from .screenplay import stamp
 
 FPS = 30  # assumed timeline rate for the EDL cut list
@@ -203,8 +202,4 @@ def write_all(out: Path, summary, notes, ordered, entries, rejected, ranking, ra
     (out / "posting_plan.md").write_text(plan_markdown(rows, summary), encoding="utf-8")
     (out / "evaluation.md").write_text(eval_markdown(ev, summary), encoding="utf-8")
     (out / "cutlist.edl").write_text(edl(rows, summary["show"]), encoding="utf-8")
-    report = {"show": summary["show"], "summary": {"episodes": summary["episodes"], "cues": summary["cues"],
-              "model": f"{summary['editor_model']} / judge {summary['judge_model']}", "model_success": sum(item["status"] == "Viewer passed" for item in coverage)},
-              "promos": rows, "coverage": coverage}
-    (out / "index.html").write_text(render_report(report), encoding="utf-8")
     save_json(out / "run_summary.json", summary)

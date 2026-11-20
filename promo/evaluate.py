@@ -139,19 +139,31 @@ def evaluate(entries: list[dict], rejected: list[dict], episodes: list[Episode],
     }
 
 
+_TIMES = re.compile(r"Ep\s*(\d+)\D{1,12}?(\d+:\d\d(?:\.\d+)?)\D{1,12}?(\d+:\d\d(?:\.\d+)?)")
+
+
+def _segment_key(text: str) -> tuple:
+    """The same cut written either way ("Ep 2 [00:10.00 – 00:36.00]" or "Ep 2 00:10.00 to 00:36.00 + ...") gives the same key."""
+    return tuple(_TIMES.findall(text or ""))
+
+
 def human_review(path, promos: list[dict], reviewer: str | None = None, kind: str | None = None) -> dict | None:
-    """Read the review page's exported CSV (keep / trim / pass) and score the tool against a person."""
+    """Read a person's keep / trim / pass file and score the tool against it. Accepts the Review tab's handoff CSV
+    (your_decision; original_segments when a cut was moved) and the older ratings CSV (decision)."""
     import csv
     if not path:
         return None
-    # must match promo/report.py, which joins "Ep N [in – out]" cells with " | "
-    by_segments = {" | ".join(f"Ep {s['episode']} [{s['start']} – {s['end']}]" for s in p["segments"]): p for p in promos}
+    by_segments = {_segment_key(" + ".join(f"Ep {s['episode']} [{s['start']} \u2013 {s['end']}]" for s in p["segments"])): p for p in promos}
     by_id = {}
     with open(path, encoding="utf-8-sig", newline="") as handle:
         for row in csv.DictReader(handle):
-            promo = by_segments.get(row.get("segments_in_order", "").strip())
-            if promo and row.get("decision") in ("keep", "trim", "pass"):
-                by_id[row["segments_in_order"].strip()] = (promo, row["decision"])
+            decision = row.get("decision") or row.get("your_decision")
+            for cell in (row.get("original_segments"), row.get("segments_in_order")):
+                key = _segment_key(cell)
+                if key in by_segments and decision in ("keep", "trim", "pass"):
+                    by_id[key] = (by_segments[key], decision)
+                    break
+    by_id = {" + ".join(f"Ep {e} [{a} \u2013 {b}]" for e, a, b in k): v for k, v in by_id.items()}
     judged = list(by_id.values())
     def share(items):
         n = len(items)

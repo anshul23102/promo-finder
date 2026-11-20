@@ -102,7 +102,7 @@ def run_upload(name: str, data: bytes, *, work: Path, log_fn=None, limits: dict 
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(raw)
     try:
-        main([str(inp), "--model", "rules", "--out", str(out), "--cache", str(work / "cache"), "--title", show_title(name)],
+        main([str(inp), "--model", "rules", "--out", str(out), "--cache", str(work / "cache"), "--title", show_title(name), "--no-viewer"],
              log_fn=log_fn)
     except ValueError as exc:                       # malformed timestamps, duplicate episode numbers, no cues ...
         raise InputError(str(exc)) from exc

@@ -25,9 +25,9 @@ An earlier version asked one model to pick whole promos (`--finder editor`). It 
 
 ## Try it in your browser (no install, no upload)
 
-The published page has a **Run it** tab (`#/run`). Choose one episode (`.txt`) or a ZIP of `.txt` episodes and it runs the same rules finder in your browser tab (the Python engine, compiled to WebAssembly with [Pyodide](https://pyodide.org) 0.29.5, Python 3.13) and opens the same review page on your result. There are no keys, no model calls and no analytics on that path, the script is read in memory, deleted when the run ends, and never written to browser storage. Results are labelled **rules candidates**: timing-checked material for an editor, not AI-judged promos.
+The published page has a **Run it** tab (`#/run`). Choose episode files, a folder, one ZIP, or paste a script, and it runs the same rules finder in your browser tab (the Python engine, compiled to WebAssembly with [Pyodide](https://pyodide.org) 0.29.5, Python 3.13) and shows the same results pages for your show. There are no keys, no model calls and no analytics on that path, the script is read in memory, deleted when the run ends, and never written to browser storage. Results are labelled **rules candidates**: timing-checked material for an editor, not AI-judged promos.
 
-- Limits: one `.txt` or one `.zip`, at most 25 MB, 200 episodes, 5 MB per episode, 60 MB unpacked. SRT and VTT subtitles are not read yet.
+- Limits: several `.txt` files, a folder or one `.zip`, at most 25 MB, 200 episodes, 5 MB per episode, 60 MB unpacked. SRT and VTT subtitles are not read yet.
 - AI runs, bigger shows and anything confidential stay on your computer (below). If the runtime cannot start, the page says why and the demo keeps working.
 - Reviewers who cannot play the preview get a plain-text list of the same cuts under the result bar, and **Download all run files (.zip)** returns every output plus `contract.json`.
 - Checked: the browser engine and native Python produce the same output file for file (`node tools/check_browser_parity.mjs`, part of `tools/release_check.sh`), on bundled inputs, a 50-episode synthetic show and the rejection cases.
@@ -69,7 +69,9 @@ On macOS, the private project’s Finder launcher opens a timing-only review wit
 
 Browser version (no install): the **Run it** tab of the live page takes a ZIP, a folder, several episode files or pasted text and runs the finder in your browser tab. On your own computer, `python3 ui-claude/workbench.py` does the same with an AI engine of your choice.
 
-Outputs land in `private/runs/<time>/`: `index.html` (review page), `posting_plan.md`, `promos.csv`, `promos.json`, `evaluation.md`, `coverage.json`, `cutlist.edl`, `show_guide.json`, `rejected.json`, `ranking.json`, `model_calls.jsonl` (every raw model reply).
+Outputs land in `private/runs/<time>/`: `index.html` (the same results page as the live demo, opens offline, with `data.js` and its assets next to it), `posting_plan.md`, `promos.csv`, `promos.json`, `evaluation.md`, `coverage.json`, `cutlist.edl`, `show_guide.json`, `rejected.json`, `ranking.json`, `model_calls.jsonl` (every raw model reply).
+
+A person's keep/trim/pass file (the Review tab's handoff CSV) can be scored against a run: `python3 -m promo <scripts.zip> --review "handoff.csv|human|Name"`.
 
 Tests: `python3 -m unittest discover -s tests`
 

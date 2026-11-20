@@ -290,6 +290,7 @@ function runBusy(on) {
 }
 async function runConfig() {
   if (R.cfg !== undefined) return R.cfg;
+  if (location.protocol === 'file:') { R.cfg = null; return null; }   // an offline copy of a run has no runtime next to it
   try { const r = await fetch(rel('run/version.json')); R.cfg = r.ok ? await r.json() : null; } catch (e) { R.cfg = null; }
   if (R.cfg && !R.cfg.worker) R.cfg = null;
   return R.cfg;
