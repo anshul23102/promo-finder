@@ -67,12 +67,7 @@ Swap models with one flag (`a|b` is a fallback chain; an overloaded model is ski
 
 On macOS, the private project’s Finder launcher opens a timing-only review without a model. Launch it from Terminal with PROMO_LOCAL_MODEL=qwen3:4b to request local AI.
 
-Web app (upload a ZIP, review in the browser):
-
-```bash
-pip install -r requirements.txt
-streamlit run app.py
-```
+Browser version (no install): the **Run it** tab of the live page takes a ZIP, a folder, several episode files or pasted text and runs the finder in your browser tab. On your own computer, `python3 ui-claude/workbench.py` does the same with an AI engine of your choice.
 
 Outputs land in `private/runs/<time>/`: `index.html` (review page), `posting_plan.md`, `promos.csv`, `promos.json`, `evaluation.md`, `coverage.json`, `cutlist.edl`, `show_guide.json`, `rejected.json`, `ranking.json`, `model_calls.jsonl` (every raw model reply).
 
