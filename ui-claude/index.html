@@ -258,10 +258,29 @@ python3 -m promo path/to/scripts.zip \
 
         <div id="modeAi" hidden>
           <section class="ai-off" id="aiOff" hidden>
-            <h2>AI runs on your own computer</h2>
-            <p>The AI engines need a key and a server, so they cannot run inside a public web page. Start the Workbench on your computer and reopen this page from it. This tab then lets you pick an engine, add scripts and watch the run.</p>
-            <pre class="code">python3 ui-claude/workbench.py</pre>
-            <p class="muted">It listens on 127.0.0.1 only, keeps your scripts under <code>private/workbench/</code>, and asks before anything is sent to a provider. Without a key, the in-tab runner above still works with no AI.</p>
+            <h2>Run it on your computer</h2>
+            <p>The AI engines need a key and a small local server, so they cannot run inside a public web page. Four steps give you this same page with the AI option switched on. You only need Python 3. There is nothing to install.</p>
+            <ol class="run-steps">
+              <li>
+                <h3>Get the code</h3>
+                <div class="cmd"><pre class="code">git clone https://github.com/anshul23102/promo-finder.git
+cd promo-finder</pre><button class="pill" type="button" data-copy="git clone https://github.com/anshul23102/promo-finder.git&#10;cd promo-finder">Copy</button></div>
+              </li>
+              <li>
+                <h3>Add a key</h3>
+                <p>Copy the example file, then paste a free <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Gemini key</a> after <code>GEMINI_API_KEY=</code>. A <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq key</a> works too. A local Ollama model needs no key.</p>
+                <div class="cmd"><pre class="code">cp .env.example .env</pre><button class="pill" type="button" data-copy="cp .env.example .env">Copy</button></div>
+              </li>
+              <li>
+                <h3>Start the Workbench</h3>
+                <div class="cmd"><pre class="code">python3 ui-claude/workbench.py</pre><button class="pill" type="button" data-copy="python3 ui-claude/workbench.py">Copy</button></div>
+              </li>
+              <li>
+                <h3>Open Run it, then With AI</h3>
+                <p>A page opens at <code>127.0.0.1:8770</code>. The With AI option now says "Connected on this computer". Add your scripts, pick an engine, tick the confirm box and watch the run.</p>
+              </li>
+            </ol>
+            <p class="muted">It listens on 127.0.0.1 only, keeps your scripts under <code>private/workbench/</code>, and asks before anything is sent to a provider. Without a key, the in-tab runner still works with no AI.</p>
             <p><button class="pill" type="button" id="aiBack">Use the in-tab runner</button></p>
           </section>
 

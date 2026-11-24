@@ -10,7 +10,7 @@
 <title>Promo Finder</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2040%2040%22%3E%3Cdefs%3E%3CclipPath%20id%3D%22t%22%3E%3Cpath%20d%3D%22M0%200H40V18.6L0%2025.4Z%22/%3E%3C/clipPath%3E%3CclipPath%20id%3D%22b%22%3E%3Cpath%20d%3D%22M0%2031.6L40%2024.8V40H0Z%22/%3E%3C/clipPath%3E%3C/defs%3E%3Crect%20x%3D%228%22%20y%3D%221.5%22%20width%3D%2224%22%20height%3D%2237%22%20rx%3D%227%22%20fill%3D%22%23FF641C%22%20clip-path%3D%22url%28%23t%29%22/%3E%3Cg%20transform%3D%22translate%282.4%201.4%29%22%3E%3Crect%20x%3D%228%22%20y%3D%221.5%22%20width%3D%2224%22%20height%3D%2237%22%20rx%3D%227%22%20fill%3D%22%23FF641C%22%20opacity%3D%22.4%22%20clip-path%3D%22url%28%23b%29%22/%3E%3C/g%3E%3Cpath%20d%3D%22M16.6%207.2v10.4l9-5.2z%22%20fill%3D%22%23fff%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="../fonts.css">
-<link rel="stylesheet" href="../app.css?v=958670a639">
+<link rel="stylesheet" href="../app.css?v=087902986b">
 </head>
 <body>
 
@@ -259,10 +259,29 @@ python3 -m promo path/to/scripts.zip \
 
         <div id="modeAi" hidden>
           <section class="ai-off" id="aiOff" hidden>
-            <h2>AI runs on your own computer</h2>
-            <p>The AI engines need a key and a server, so they cannot run inside a public web page. Start the Workbench on your computer and reopen this page from it. This tab then lets you pick an engine, add scripts and watch the run.</p>
-            <pre class="code">python3 ui-claude/workbench.py</pre>
-            <p class="muted">It listens on 127.0.0.1 only, keeps your scripts under <code>private/workbench/</code>, and asks before anything is sent to a provider. Without a key, the in-tab runner above still works with no AI.</p>
+            <h2>Run it on your computer</h2>
+            <p>The AI engines need a key and a small local server, so they cannot run inside a public web page. Four steps give you this same page with the AI option switched on. You only need Python 3. There is nothing to install.</p>
+            <ol class="run-steps">
+              <li>
+                <h3>Get the code</h3>
+                <div class="cmd"><pre class="code">git clone https://github.com/anshul23102/promo-finder.git
+cd promo-finder</pre><button class="pill" type="button" data-copy="git clone https://github.com/anshul23102/promo-finder.git&#10;cd promo-finder">Copy</button></div>
+              </li>
+              <li>
+                <h3>Add a key</h3>
+                <p>Copy the example file, then paste a free <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Gemini key</a> after <code>GEMINI_API_KEY=</code>. A <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq key</a> works too. A local Ollama model needs no key.</p>
+                <div class="cmd"><pre class="code">cp .env.example .env</pre><button class="pill" type="button" data-copy="cp .env.example .env">Copy</button></div>
+              </li>
+              <li>
+                <h3>Start the Workbench</h3>
+                <div class="cmd"><pre class="code">python3 ui-claude/workbench.py</pre><button class="pill" type="button" data-copy="python3 ui-claude/workbench.py">Copy</button></div>
+              </li>
+              <li>
+                <h3>Open Run it, then With AI</h3>
+                <p>A page opens at <code>127.0.0.1:8770</code>. The With AI option now says "Connected on this computer". Add your scripts, pick an engine, tick the confirm box and watch the run.</p>
+              </li>
+            </ol>
+            <p class="muted">It listens on 127.0.0.1 only, keeps your scripts under <code>private/workbench/</code>, and asks before anything is sent to a provider. Without a key, the in-tab runner still works with no AI.</p>
             <p><button class="pill" type="button" id="aiBack">Use the in-tab runner</button></p>
           </section>
 
@@ -402,6 +421,6 @@ python3 -m promo path/to/scripts.zip \
 </div>
 
 <script src="bootstrap.1aba02221f.js"></script>
-<script src="../app.js?v=65be85f2f3"></script>
+<script src="../app.js?v=7c97c84e69"></script>
 </body>
 </html>

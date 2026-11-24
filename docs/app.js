@@ -641,6 +641,7 @@ async function initAi() {
   const label = (t, on) => { $('#aiState').textContent = t; const s = $('#hmAiState'); s.textContent = t; s.classList.toggle('on', !!on); };
   document.querySelectorAll('.run-modes button').forEach(b => b.addEventListener('click', () => { location.hash = b.dataset.mode === 'ai' ? '#/run/ai' : '#/run'; }));
   $('#aiBack').addEventListener('click', () => { location.hash = '#/run'; });
+  document.querySelectorAll('#aiOff [data-copy]').forEach(b => b.addEventListener('click', () => copyText(b.dataset.copy)));
   if (!WB.live) { label('Start the Workbench to turn this on', false); show($('#aiOff'), true); show($('#aiOn'), false); return; }
   try { WB.engines = await wb('/api/engines'); }
   catch (e) { WB.live = false; label('Workbench not reachable', false); show($('#aiOff'), true); show($('#aiOn'), false); return; }
