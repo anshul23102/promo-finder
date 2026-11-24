@@ -67,3 +67,18 @@ class RateLimitTest(unittest.TestCase):
             with self.assertRaisesRegex(Exception, "daily limit reached"):
                 m.ask("t", "s", "u", {"type": "object", "properties": {"a": {"type": "string"}}, "required": ["a"], "additionalProperties": False})
             self.assertFalse(any(c.args and c.args[0] > 60 for c in slept.call_args_list))  # never slept for hours
+
+    def test_no_credits_fails_at_once_with_a_clear_message(self):
+        import io
+        from urllib import error, request
+        from unittest import mock
+        body = io.BytesIO(b'{"error":{"message":"You have no credits remaining. Add credits to continue using the API."}}')
+        http = error.HTTPError("u", 429, "Too Many Requests", {}, body)
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(request, "urlopen", side_effect=http) as call, \
+                mock.patch("time.sleep") as slept:
+            m = Model("openai:gpt-5-mini", Path(tmp), key="k")
+            with self.assertRaisesRegex(Exception, "no credits or quota left"):
+                m.ask("t", "s", "u", {"type": "object", "properties": {"a": {"type": "string"}}, "required": ["a"], "additionalProperties": False})
+            self.assertEqual(call.call_count, 1)            # no retries: waiting cannot add credits
+            slept.assert_not_called()
+

@@ -323,6 +323,9 @@ class Model:
                     return json.load(response)
             except error.HTTPError as exc:
                 detail = exc.read().decode("utf-8", "replace")[:300]
+                if exc.code == 429 and re.search(r"no credits|credits remaining|insufficient_quota|exceeded your current quota|billing", detail, re.I):
+                    raise ModelError(f"{stage}: {self.label} returned HTTP 429: this account has no credits or quota left ({detail[:160]}). "
+                                     "Add credits or billing for the key, or use another engine; retrying will not help.") from exc
                 if exc.code == 429 and re.search(r"per day|\bTPD\b|\bRPD\b|daily", detail, re.I):
                     raise ModelError(f"{stage}: {self.label} returned HTTP 429: daily limit reached ({detail[:160]}). "
                                      "Cached answers are kept; run the same command after the limit resets.") from exc

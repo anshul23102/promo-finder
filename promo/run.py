@@ -232,10 +232,11 @@ def main(argv=None, *, key=None, base_url=None, log_fn=None):
         for attempt in range(4):
             try:
                 return ai.viewer(judge, *a, **k)
-            except ModelError:
-                if attempt == 3:
+            except ModelError as exc:
+                transient = any(w in str(exc).lower() for w in ("timed out", "429", "503", "overload", "high demand", "unavailable", "rate"))
+                if attempt == 3 or not transient:
                     raise
-                time.sleep(15 * (attempt + 1))
+                time.sleep(float(os.environ.get("PROMO_RETRY_PAUSE", 15)) * (attempt + 1))
 
     def view(pool):
         nonlocal judge_available

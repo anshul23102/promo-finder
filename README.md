@@ -10,7 +10,7 @@ The brief defines a promo by three properties that live in different places: the
 
 ```
 screenplays -> parse (code) -> show guide (AI, 1 call) -> beat scores (AI, 1 call per episode)
-            -> search every legal opening x ending pair (code) -> cold viewer sees only the clip (AI)
+            -> search every legal opening x ending pair (code) -> cold viewer sees only the clip (AI; --votes 2 reads it twice)
             -> ranking: shuffled groups + Bradley-Terry (AI) -> posting plan (code) -> quality report (code)
 ```
 
@@ -82,10 +82,10 @@ Before a release: `tools/release_check.sh` runs the tests, a model-swap smoke te
 
 ## The results page
 
-One page with five tabs, the same header and fonts throughout. **Promos** is the answer: a reel that plays the top three (hook, cut, cliffhanger), then every promo in posting order with its segments, hook, cliffhanger, why it works and the clip's script, with CSV and JSON downloads. **Season** shows every episode as a row with the promos drawn where they sit in it. **Quality** shows how many cuts were found and kept, four checks (each with what it cannot prove) and the known weak spots. **Run it** takes any show: drop or pick episode files, a whole folder or one ZIP, paste a script, or try an example, and the finder runs inside the tab (no AI, no upload) and shows the same pages. **Review (optional)** is not part of the task: it plays each promo as the script unfolds, lets you nudge its cut to a clean line break and records keep, trim or pass for an editor handoff. Code lives in `ui-claude/`.
+It opens on a **home page** (a short, interactive explanation of how a promo is found, and the three ways to run it); it shows no results until you open the sample show or run one. Then one page with five tabs, the same header and fonts throughout. **Promos** is the answer: a reel that plays the top three (hook, cut, cliffhanger), then every promo in posting order with its segments, hook, cliffhanger, why it works and the clip's script, with CSV and JSON downloads. **Season** shows every episode as a row with the promos drawn where they sit in it. **Quality** shows how many cuts were found and kept, four checks (each with what it cannot prove) and the known weak spots. **Run it** takes any show: drop or pick episode files, a whole folder or one ZIP, paste a script, or try an example, and the finder runs inside the tab (no AI, no upload) and shows the same pages. **Review (optional)** is not part of the task: it plays each promo as the script unfolds, lets you nudge its cut to a clean line break and records keep, trim or pass for an editor handoff. Code lives in `ui-claude/`.
 
 - **Try it now, no setup:** [live demo](https://anshul23102.github.io/promo-finder/) with a made-up show (`examples/the-last-edition/`, seven episodes). The demo data is synthetic; it contains no Kuku content.
-- **Use it on your own scripts, in the browser:** `python3 ui-claude/workbench.py` opens a page where you drop episode files (or one ZIP), pick an engine (no AI, Groq, Gemini or a local model) and get the results pages. It binds to 127.0.0.1 only, checks a per-launch token, and asks you to confirm before any script text is sent to an AI provider.
+- **Use it on your own scripts, with AI:** `python3 ui-claude/workbench.py` serves this same page on your computer. In **Run it**, the **With AI** option lights up: drop episode files (or one ZIP), pick an engine (no AI, Groq, Gemini or a local model), watch the steps and get the results pages in the tab. It binds to 127.0.0.1 only, checks a per-launch token, and asks you to confirm before any script text is sent to an AI provider. On the public page the option explains how to start it. The earlier stand-alone page is at `/classic`.
 - **View a finished run (stays on your machine):**
 
 ```bash
