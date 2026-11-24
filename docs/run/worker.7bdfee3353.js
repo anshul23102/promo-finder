@@ -1,10 +1,10 @@
 /* Runs the real Python finder (the same promo/ package the command line uses) inside the browser, in a module worker.
    Loaded only when someone presses "Run". Takes no keys and makes no network calls once the runtime is loaded:
    the uploaded bytes are written to this worker's in-memory file system, read, and deleted again in a finally block.
-   runtime/pyodide-0.29.5/, engine.4b3261ea0d.zip and 4b3261ea0d926086aa20cf15cba7972f198fd3c752557df713b6d20933662358 are filled in by ui-claude/build_runner.py. */
+   runtime/pyodide-0.29.5/, engine.5affdc291a.zip and 5affdc291a8003f037b2c83bd4724397d63a083f4ed0b1aae6e48abc06725aa2 are filled in by ui-claude/build_runner.py. */
 const RUNTIME = 'runtime/pyodide-0.29.5/';          // folder of the pinned Pyodide files, relative to this worker
-const ENGINE = 'engine.4b3261ea0d.zip';            // content-hashed zip of the promo/ package
-const ENGINE_SHA = '4b3261ea0d926086aa20cf15cba7972f198fd3c752557df713b6d20933662358';
+const ENGINE = 'engine.5affdc291a.zip';            // content-hashed zip of the promo/ package
+const ENGINE_SHA = '5affdc291a8003f037b2c83bd4724397d63a083f4ed0b1aae6e48abc06725aa2';
 
 const base = new URL('.', self.location.href);
 const say = (m) => self.postMessage(m);

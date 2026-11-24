@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0A0A14">
+<meta name="wb-token" content="__WB_TOKEN__">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'none'">
 <title>Promo Finder</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2040%2040%22%3E%3Cdefs%3E%3CclipPath%20id%3D%22t%22%3E%3Cpath%20d%3D%22M0%200H40V18.6L0%2025.4Z%22/%3E%3C/clipPath%3E%3CclipPath%20id%3D%22b%22%3E%3Cpath%20d%3D%22M0%2031.6L40%2024.8V40H0Z%22/%3E%3C/clipPath%3E%3C/defs%3E%3Crect%20x%3D%228%22%20y%3D%221.5%22%20width%3D%2224%22%20height%3D%2237%22%20rx%3D%227%22%20fill%3D%22%23FF641C%22%20clip-path%3D%22url%28%23t%29%22/%3E%3Cg%20transform%3D%22translate%282.4%201.4%29%22%3E%3Crect%20x%3D%228%22%20y%3D%221.5%22%20width%3D%2224%22%20height%3D%2237%22%20rx%3D%227%22%20fill%3D%22%23FF641C%22%20opacity%3D%22.4%22%20clip-path%3D%22url%28%23b%29%22/%3E%3C/g%3E%3Cpath%20d%3D%22M16.6%207.2v10.4l9-5.2z%22%20fill%3D%22%23fff%22/%3E%3C/svg%3E">
-<link rel="stylesheet" href="fonts.css?v=1795171383">
-<link rel="stylesheet" href="app.css?v=1795171383">
+<link rel="stylesheet" href="fonts.css?v=1795517188">
+<link rel="stylesheet" href="app.css?v=1795517188">
 </head>
 <body>
 
@@ -26,22 +27,133 @@
 
 <div id="app" class="app">
   <header class="bar">
-    <a class="brand" href="#/promos" aria-label="Promo Finder, home">
+    <a class="brand" href="#/" aria-label="Promo Finder, home">
       <svg class="mark" aria-hidden="true"><use href="#logo"/></svg>
       <span class="brand-name">Promo<b>Finder</b></span>
     </a>
     <nav class="nav" id="nav" aria-label="Pages">
-      <a href="#/promos" data-nav="promos">Promos</a>
-      <a href="#/season" data-nav="season">Season</a>
-      <a href="#/quality" data-nav="quality">Quality</a>
+      <a href="#/" data-nav="home">Home</a>
+      <a href="#/promos" data-nav="promos" class="needs-open">Promos</a>
+      <a href="#/season" data-nav="season" class="needs-open">Season</a>
+      <a href="#/quality" data-nav="quality" class="needs-open">Quality</a>
       <a href="#/run" data-nav="run">Run it</a>
-      <a href="#/review" data-nav="review">Review <small>optional</small></a>
+      <a href="#/review" data-nav="review" class="needs-open">Review <small>optional</small></a>
     </nav>
     <p class="show" id="showTitle"></p>
     <p class="demo-pill" id="demoPill" hidden>Demo with a made-up show</p>
   </header>
 
   <main class="views">
+
+    <!-- Home: the landing page. It shows no results; those open only when you pick a sample or run a show. -->
+    <section class="view" id="v-home" aria-label="Home">
+      <div class="hm" id="hm">
+        <header class="hm-hero" id="hmHero">
+          <i class="hm-orb a" aria-hidden="true"></i><i class="hm-orb b" aria-hidden="true"></i><i class="hm-spot" aria-hidden="true"></i><i class="hm-grain" aria-hidden="true"></i>
+          <div class="hm-copy">
+            <h1>Find the 40 seconds that make strangers press play.</h1>
+            <p class="hm-lede">Promo Finder reads a microdrama screenplay and cuts the 20 to 60 second clips that open on a hook, end on a cliffhanger and make sense to someone who has never seen the show.</p>
+            <div class="hm-cta"><a class="pill primary big" href="#/run" id="hmBring">Bring a show</a><button class="pill big" type="button" id="hmSample">Explore a sample show</button></div>
+            <ul class="hm-facts">
+              <li><b>Code owns every timestamp</b><span>The AI scores lines. Code cuts on camera shots and checks every rule.</span></li>
+              <li><b>A person decides</b><span>It ranks and explains. An editor picks what gets posted.</span></li>
+              <li><b>Any model, one flag</b><span>Gemini, Groq, a local model or Kuku's own endpoint.</span></li>
+            </ul>
+          </div>
+          <div class="hm-stage">
+            <div class="hm-tilt" id="hmTilt">
+              <div class="hm-phone ph0" id="hmPhone" aria-label="A sample promo, playing">
+                <svg class="hm-ring" viewBox="0 0 360 640" aria-hidden="true"><rect class="t" x="3" y="3" width="354" height="634" rx="46" pathLength="100"/><rect class="a" x="3" y="3" width="354" height="634" rx="46" pathLength="100"/></svg>
+                <span class="hm-glare" aria-hidden="true"></span>
+                <div class="hm-screen">
+                  <p class="hm-top"><b id="hmRank">1</b><span id="hmEp">Episode 1</span><span id="hmLen">49 s</span></p>
+                  <p class="hm-label" id="hmLabel">The hook, first 3 seconds</p>
+                  <p class="hm-hook" id="hmHook"></p>
+                  <span class="hm-cut" aria-hidden="true"></span>
+                  <div class="hm-end"><small>Ends on</small><p id="hmEnds"></p></div>
+                </div>
+              </div>
+            </div>
+            <div class="hm-dots" id="hmDots" role="group" aria-label="Preview another sample promo"><button type="button" aria-label="Sample promo 1"></button><button type="button" aria-label="Sample promo 2"></button><button type="button" aria-label="Sample promo 3"></button></div>
+            <p class="hm-note">Made-up promos, as they would run: the hook, the cut, then the cliffhanger.</p>
+          </div>
+        </header>
+
+        <section class="hm-how" id="hmHow" aria-label="How it finds a promo">
+          <h2>How it finds one</h2>
+          <div class="hm-how-grid">
+            <ol class="hm-steps" id="hmSteps">
+              <li><button type="button" data-s="1" aria-current="true"><i>1</i><span><b>Read the script</b>Every line, shot and sound becomes a timed cue with its own ID.</span></button></li>
+              <li><button type="button" data-s="2"><i>2</i><span><b>Score every line</b>An AI rates each line twice: would a clip starting here stop a scroll, would one ending here leave a question open.</span></button></li>
+              <li><button type="button" data-s="3"><i>3</i><span><b>Try every legal cut</b>Code pairs each strong opening with each strong ending and keeps only 20 to 60 second cuts on shot edges.</span></button></li>
+              <li><button type="button" data-s="4"><i>4</i><span><b>Watch it like a stranger</b>A second AI sees only the clip. Weak openings and endings that answer themselves are dropped.</span></button></li>
+              <li><button type="button" data-s="5"><i>5</i><span><b>Rank and hand over</b>Small groups are ranked, the order is set for posting, and an editor gets the list.</span></button></li>
+            </ol>
+            <div class="hm-vis" id="hmVis" data-step="1" aria-live="off">
+              <div class="hv hv1"><ul class="cues">
+                <li><time>00:00.00</time><i>E01-001</i><em>Action</em><span>Maya slaps the damp front page on the counter.</span></li>
+                <li><time>00:02.29</time><i>E01-002</i><em>Maya</em><span>"Stop the press. You printed my obituary."</span></li>
+                <li><time>00:03.00</time><i>E01-003</i><em>Eli</em><span>"Your sister signed off on the proof herself."</span></li>
+                <li><time>00:05.80</time><i>E01-004</i><em>Camera</em><span>The red press light reflects in her glasses.</span></li>
+                <li><time>00:10.00</time><i>E01-005</i><em>Maya</em><span>"My sister died last winter. Show me the signature."</span></li>
+              </ul></div>
+              <div class="hv hv2"><ul class="cues scored">
+                <li><i>E01-001</i><span>Maya slaps the damp front page on the counter.</span><p><b class="m h" style="--v:3"></b><b class="m c" style="--v:1"></b></p></li>
+                <li><i>E01-002</i><span>"Stop the press. You printed my obituary."</span><p><b class="m h" style="--v:3"></b><b class="m c" style="--v:2"></b></p></li>
+                <li><i>E01-003</i><span>"Your sister signed off on the proof herself."</span><p><b class="m h" style="--v:1"></b><b class="m c" style="--v:1"></b></p></li>
+                <li><i>E01-004</i><span>The red press light reflects in her glasses.</span><p><b class="m h" style="--v:0"></b><b class="m c" style="--v:1"></b></p></li>
+                <li><i>E01-005</i><span>"My sister died last winter. Show me the signature."</span><p><b class="m h" style="--v:2"></b><b class="m c" style="--v:3"></b></p></li>
+              </ul><p class="key"><b class="m h"></b> hook score <b class="m c"></b> cliffhanger score, 0 to 3</p></div>
+              <div class="hv hv3"><div class="pairs" id="hmPairs"></div><p class="key">Rows are openings, columns are endings. Lit cells are legal: 20 to 60 seconds, on shot edges.</p></div>
+              <div class="hv hv4"><div class="viewer">
+                <p class="vh">A first-time viewer, who sees only the clip</p>
+                <dl><dt>Who</dt><dd>A journalist and a print-shop clerk looking at a front page that says she is dead.</dd>
+                <dt>First 3 seconds</dt><dd><span class="chip g">stop</span></dd>
+                <dt>Makes sense</dt><dd><span class="chip g">yes</span></dd>
+                <dt>Ending</dt><dd><span class="chip g">unresolved</span> What is wrong with the signature?</dd></dl>
+                <p class="drop-ex"><span class="chip r">scroll past</span> A clip that opens on a quiet look is dropped.</p>
+              </div></div>
+              <div class="hv hv5"><div class="deck"><span class="mini a"><b>1</b>Stop the press. You printed my obituary.</span><span class="mini b"><b>2</b>Your sister signed off on the proof herself.</span><span class="mini c"><b>3</b>That hasn't happened. Tonight it will.</span></div>
+                <p class="files"><span>CSV</span><span>JSON</span><span>EDL for your editor</span><span>contract.json</span></p></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="hm-ways" aria-label="Three ways to run it">
+          <h2>Three ways to run it</h2>
+          <div class="hm-ways-grid">
+            <article><h3>In this tab</h3><p>Rules only, on any script you bring. It runs the real Python engine in your browser. Nothing is uploaded, no key is needed.</p><a class="pill" href="#/run">Run it here</a></article>
+            <article class="ai"><h3>With AI, on your computer</h3><p>Start the Workbench, then pick Gemini, Groq, a local model or another engine. Scripts stay on your machine until you confirm a provider.</p><p class="state" id="hmAiState">Checking the Workbench...</p><a class="pill primary" href="#/run/ai">Use AI</a></article>
+            <article><h3>From the command line</h3><p>The same engine, scriptable. Swap the model with one flag.</p><pre class="code" id="hmCmd">python3 -m promo scripts.zip \
+  --model gemini --votes 2</pre><button class="pill" type="button" id="hmCopy">Copy the command</button></article>
+          </div>
+        </section>
+
+        <section class="hm-ticket" aria-label="What an editor gets">
+          <div><h2>What an editor gets</h2><p>For every promo: the episode and the start and end of each segment, the hook, the cliffhanger and one line on why it works. A posting order. Files an editor can use: CSV, JSON and a cut list for the timeline.</p>
+          <p class="muted">Every rejected cut is kept with its reason, so a person can overrule the tool.</p></div>
+          <article class="ticket"><header><b>1</b><span>Episode 1, 01:12.80 to 01:52.50</span><em>40 s</em></header>
+            <div class="tk-open"><small>Opens on</small><q>Stop the press. You printed my obituary.</q></div>
+            <div class="tk-cut" aria-hidden="true"></div>
+            <div class="tk-end"><small>Ends on</small><p>What is wrong with the death certificate signature?</p></div>
+            <p class="tk-why"><b>Why it works</b> A stranger sees a woman reading her own obituary and is left needing to know who forged it.</p>
+            <p class="tk-slot">Post first <span>Sample, made up</span></p></article>
+        </section>
+
+        <section class="hm-limits" aria-label="Where it falls short">
+          <h2>Where it falls short, in plain words</h2>
+          <ul>
+            <li><b>It reads a script, not footage.</b> It cannot see acting or pacing. Every time is only as good as the script's timing.</li>
+            <li><b>The judge is a model.</b> The scorer and the readers can be the same family, so a stricter or independent model would be better.</li>
+            <li><b>The posting order is a hint.</b> Until an editor checks it against what they would post, treat it as a suggestion.</li>
+          </ul>
+          <button class="pill" type="button" id="hmQuality">See how quality is measured</button>
+        </section>
+
+        <footer class="hm-foot"><h2>Bring a show. Get its promos.</h2><div class="hm-cta"><a class="pill primary big" href="#/run">Bring a show</a><button class="pill big" type="button" id="hmSample2">Explore a sample show</button></div></footer>
+      </div>
+    </section>
+
     <section class="view" id="v-promos" aria-label="Promos"><div class="pg" id="promosPage"></div></section>
     <section class="view" id="v-season" aria-label="Season"><div class="pg" id="seasonPage"></div></section>
     <section class="view" id="v-quality" aria-label="Quality"><div class="pg" id="qualityPage"></div></section>
@@ -51,9 +163,16 @@
       <div class="pg">
         <section class="hero run-hero">
           <h1>Bring a show.<br>Get its promos.</h1>
-          <p class="lede">Drop the episodes exactly as Kuku sends them, pick a whole folder, or paste one script. The finder runs inside this tab, finds a 20 to 60 second cut in every episode and shows you the same results pages. No AI, no account, no upload.</p>
+          <p class="lede">Drop the episodes exactly as Kuku sends them, pick a whole folder, or paste one script. Run it in this tab with no AI, or on your computer with the AI engine you choose. Either way you get a 20 to 60 second cut in every episode and the same results pages.</p>
         </section>
 
+        
+        <div class="run-modes" role="tablist" aria-label="Where to run it">
+          <button type="button" role="tab" id="rmBrowser" data-mode="browser" aria-selected="true"><b>In this tab</b><span>Rules only. Nothing leaves your computer.</span></button>
+          <button type="button" role="tab" id="rmAi" data-mode="ai" aria-selected="false"><b>With AI</b><span id="aiState">The Workbench on this computer</span></button>
+        </div>
+
+        <div id="modeBrowser">
         <div class="banner" id="runUnavailable" role="status" hidden>
           <b>The in-page runner is not part of this copy.</b>
           <p>Open the published demo to use it, or run <code>python3 -m promo path/to/scripts.zip</code> on your own computer.</p>
@@ -135,6 +254,79 @@ python3 -m promo path/to/scripts.zip \
   --model gemini --judge gemini:gemini-3.1-flash-lite \
   --votes 2 --joins</pre>
         </section>
+        </div>
+
+        <div id="modeAi" hidden>
+          <section class="ai-off" id="aiOff" hidden>
+            <h2>AI runs on your own computer</h2>
+            <p>The AI engines need a key and a server, so they cannot run inside a public web page. Start the Workbench on your computer and reopen this page from it. This tab then lets you pick an engine, add scripts and watch the run.</p>
+            <pre class="code">python3 ui-claude/workbench.py</pre>
+            <p class="muted">It listens on 127.0.0.1 only, keeps your scripts under <code>private/workbench/</code>, and asks before anything is sent to a provider. Without a key, the in-tab runner above still works with no AI.</p>
+            <p><button class="pill" type="button" id="aiBack">Use the in-tab runner</button></p>
+          </section>
+
+          <section class="ai-on" id="aiOn" hidden>
+            <div class="ai-grid">
+              <div class="ai-main" id="aiStart">
+                <h2 class="ai-h"><i>1</i>Add the scripts</h2>
+                <div class="drop" id="aiDrop">
+                  <input id="aiFileIn" class="sr-only" type="file" multiple accept=".txt,.zip,text/plain,application/zip">
+                  <input id="aiDirIn" class="sr-only" type="file" webkitdirectory multiple>
+                  <div class="drop-lit">
+                    <small>Hook</small>
+                    <p>Drop episodes here</p>
+                    <div class="drop-actions">
+                      <label for="aiFileIn" class="pill primary">Choose files</label>
+                      <label for="aiDirIn" class="pill">Choose a folder</label>
+                      <button class="pill" type="button" id="aiExample">Use a made-up show</button>
+                    </div>
+                    <span class="hint">many .txt episodes, one .zip, or a whole folder</span>
+                  </div>
+                  <div class="drop-seam" aria-hidden="true"></div>
+                  <div class="drop-dim"><small>Cliffhanger</small><p>The promos come back when the run finishes</p></div>
+                </div>
+                <ul class="ai-files" id="aiFiles" aria-label="Files added"></ul>
+                <label class="ai-field">Show name <input type="text" id="aiTitle" maxlength="80" placeholder="My show"></label>
+
+                <h2 class="ai-h"><i>2</i>Choose the engine</h2>
+                <div class="ai-engines" id="aiEngines" role="radiogroup" aria-label="Engine"></div>
+                <label class="ai-field" id="aiModelWrap" hidden>Model <input type="text" id="aiModel" autocomplete="off" spellcheck="false"></label>
+                <label class="ai-field" id="aiBaseWrap" hidden>Endpoint address <input type="text" id="aiBase" placeholder="https://host/v1" autocomplete="off" spellcheck="false"></label>
+                <p id="aiKeyToggleWrap" hidden><button class="linklike" id="aiKeyToggle" type="button">Use a different key for this run</button></p>
+                <label class="ai-field" id="aiKeyWrap" hidden>API key for this run <input type="password" id="aiKey" autocomplete="off" spellcheck="false" placeholder="Paste a key, or leave empty to use the .env file"><small class="muted">Held in memory while the run lasts. Never saved, logged or shown again.</small></label>
+                <label class="ai-field" id="aiEpsWrap">Episodes <input type="text" id="aiEps" placeholder="all, or for example 1-5 or 2,7,33" autocomplete="off"></label>
+                <div class="ai-warn" id="aiSends" hidden><p id="aiSendsText"></p><label><input type="checkbox" id="aiConfirm"> I am allowed to send these scripts to that provider.</label></div>
+
+                <h2 class="ai-h"><i>3</i>Run</h2>
+                <p><button class="pill primary big" type="button" id="aiRun" disabled>Find the promos</button></p>
+                <p class="run-error" id="aiError" role="alert" hidden></p>
+                <div class="ai-prog" id="aiProg" hidden aria-live="polite">
+                  <p class="ai-phase"><span class="spin" aria-hidden="true"></span><b id="aiPhase">Starting</b><span id="aiClock" class="muted"></span><button class="pill" type="button" id="aiStop">Stop</button></p>
+                  <p class="ai-hint" id="aiHint" role="status" hidden></p>
+                  <ol class="ai-steps" id="aiSteps"></ol>
+                  <details><summary>Show the log</summary><pre class="ai-log" id="aiLog"></pre></details>
+                </div>
+              </div>
+              <aside class="run-facts" aria-label="What to expect">
+                <section><h2>What you get</h2><p>The full pipeline: every line scored, every legal cut tried, each clip read by a stranger, ranked, with a written reason. The same results pages as the sample, for your show.</p></section>
+                <section><h2>What leaves your computer</h2><p>With <b>No AI</b> or a <b>local model</b>, nothing. With Gemini or Groq, the script text goes to that provider, and only after you tick the box. Keys stay in the <code>.env</code> file; this page never sees them.</p></section>
+                <section><h2>How long it takes</h2><p>A few minutes for a handful of episodes on a free plan, longer for a full show. Answers are cached, so a stopped run resumes without paying again.</p></section>
+              </aside>
+            </div>
+            <section class="run-result" id="aiResult" hidden aria-label="Results">
+              <div class="run-bar">
+                <p class="run-title"><b id="aiRTitle"></b><span id="aiRMeta"></span></p>
+                <div class="run-actions">
+                  <a class="pill primary" id="aiOpenFull" target="_blank" rel="noopener" href="#">Open in its own tab</a>
+                  <button class="pill" type="button" id="aiAgain">Run another show</button>
+                </div>
+              </div>
+              <ul class="banner-list" id="aiWarn" hidden></ul>
+              <iframe id="aiView" class="run-view" title="Results for the show you ran" hidden></iframe>
+            </section>
+          </section>
+        </div>
+
       </div>
     </section>
 
@@ -208,7 +400,7 @@ python3 -m promo path/to/scripts.zip \
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
-<script src="data.js?v=1795171383"></script>
-<script src="app.js?v=1795171383"></script>
+<script src="data.js?v=1795517188"></script>
+<script src="app.js?v=1795517188"></script>
 </body>
 </html>

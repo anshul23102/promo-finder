@@ -21,7 +21,9 @@ const PAIR = { 22: 262, 340: 215, 262: 22, 200: 22, 160: 300, 46: 262 };
 const partner = h => PAIR[h] ?? (h + 200) % 360;
 const hueOf = s => PALETTE[[...String(s)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % PALETTE.length];
 
-const EMBED = !!window.PROMO_MEMORY_ONLY;                          // inside the Run it tab: this same page, fed from memory
+const EMBED = !!window.PROMO_MEMORY_ONLY || /[?&]embed=1\b/.test(location.search);   // inside the Run it tab: this same page, fed from memory or from a Workbench job
+const RESULT_VIEWS = ['promos', 'season', 'quality', 'review'];
+let opened = EMBED || RESULT_VIEWS.includes(location.hash.replace(/^#\/?/, '').split('/')[0]);   // results show only after a sample is opened or a show is run
 if (EMBED) document.body.classList.add('embedded');
 const RUN = D.run || {};
 const Q = D.quality || {};
@@ -444,28 +446,253 @@ function loadReview() {
   return reviewLoading;
 }
 
+/* ---------- home: the landing page. It shows no results; those open when you pick a sample or run a show ---------- */
+const SAMPLES = [
+  { rank: 1, ep: 1, len: '49 s', h: 262, hook: 'Stop the press. You printed my obituary.', ends: 'What is wrong with the death certificate signature?' },
+  { rank: 2, ep: 2, len: '41 s', h: 22, hook: 'Your sister signed off on the proof herself.', ends: 'Who answered the phone in the empty newsroom?' },
+  { rank: 3, ep: 2, len: '46 s', h: 200, hook: 'Maya. Nora. Please, sit. I printed this for both of you.', ends: 'Who is switching off the lights?' },
+];
+const HM = { i: 0, timer: 0, on: false, step: 1, stepT: 0, manual: false, seen: false };
+const openResults = (view = 'promos') => { opened = true; $('.app').classList.add('opened'); location.hash = '#/' + view; };
+function hmPlay() {
+  clearTimeout(HM.timer);
+  const ph = $('#hmPhone'), tk = SAMPLES[HM.i % SAMPLES.length], set = (id, t) => { $(id).textContent = t; };
+  ph.className = 'hm-phone ph0';
+  ph.style.setProperty('--h', tk.h);
+  $('.hm-screen', ph).style.setProperty('--h', tk.h); $('.hm-screen', ph).style.setProperty('--h2', (tk.h + 200) % 360);
+  set('#hmRank', tk.rank); set('#hmEp', 'Episode ' + tk.ep); set('#hmLen', tk.len); set('#hmHook', tk.hook); set('#hmEnds', tk.ends); set('#hmLabel', ' ');
+  document.querySelectorAll('#hmDots button').forEach((b, k) => b.classList.toggle('on', k === HM.i % SAMPLES.length));
+  if (reduced) { ph.className = 'hm-phone ph3'; set('#hmLabel', 'Ends on'); return; }
+  const at = (ms, fn) => { HM.timer = setTimeout(fn, ms); };
+  void ph.offsetWidth;                                          // restart the ring from empty
+  at(120, () => { ph.className = 'hm-phone ph1'; set('#hmLabel', 'The hook, first 3 seconds'); at(3200, () => { ph.className = 'hm-phone ph2'; set('#hmLabel', 'The cut'); at(1100, () => { ph.className = 'hm-phone ph3'; set('#hmLabel', 'Ends on'); at(5200, () => { HM.i++; hmPlay(); }); }); }); });
+}
+function hmStop() { clearTimeout(HM.timer); clearTimeout(HM.stepT); HM.on = false; }
+function hmStart() { if (HM.on) return; HM.on = true; hmPlay(); if (HM.seen && !HM.manual) hmStepNext(); }
+function hmSetStep(n, manual) {
+  HM.step = n; $('#hmVis').dataset.step = n;
+  document.querySelectorAll('#hmSteps button').forEach(b => { if (+b.dataset.s === n) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current'); });
+  clearTimeout(HM.stepT);
+  if (manual) { HM.manual = true; $('#hmSteps').classList.add('manual'); return; }
+  hmStepNext();
+}
+function hmStepNext() { clearTimeout(HM.stepT); if (reduced || HM.manual || !HM.on) return; HM.stepT = setTimeout(() => hmSetStep(HM.step % 5 + 1, false), 5200); }
+function hmPairs() {                                            // 8 openings x 8 endings: the legal ones light up, the best one glows
+  const o = [0, 6, 12, 18, 26, 34, 42, 52], e = [24, 32, 40, 48, 56, 64, 74, 86], hs = [3, 2, 3, 1, 2, 3, 1, 2], cs = [2, 3, 2, 3, 2, 3, 2, 3];
+  let best = null; const cells = [];
+  o.forEach((a, r) => e.forEach((b, c) => { const len = b - a, ok = len >= 20 && len <= 60, sc = hs[r] + cs[c] - Math.abs(len - 40) / 100; cells.push({ r, c, ok, sc }); if (ok && (!best || sc > best.sc)) best = { r, c, sc }; }));
+  $('#hmPairs').innerHTML = cells.map(x => `<i class="cell${x.ok ? ' on' : ''}${best && best.r === x.r && best.c === x.c ? ' best' : ''}" style="--d:${x.r + x.c}"></i>`).join('');
+}
+function copyText(t) {
+  const done = () => toast('Copied');
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, () => toast('Select the command and copy it'));
+  else toast('Select the command and copy it');
+}
+function initHome() {
+  const label = D.show.demo ? 'Explore a sample show' : `Open the results for ${D.show.title}`;
+  ['#hmSample', '#hmSample2'].forEach(id => { const b = $(id); b.textContent = label; b.addEventListener('click', () => openResults('promos')); });
+  $('#hmQuality').addEventListener('click', () => openResults('quality'));
+  $('#hmCopy').addEventListener('click', () => copyText($('#hmCmd').textContent));
+  hmPairs();
+  document.querySelectorAll('#hmDots button').forEach((b, k) => b.addEventListener('click', () => { HM.i = k; hmPlay(); }));
+  document.querySelectorAll('#hmSteps button').forEach(b => b.addEventListener('click', () => hmSetStep(+b.dataset.s, true)));
+  const hero = $('#hmHero'), tilt = $('#hmTilt'), phone = $('#hmPhone');
+  if (!reduced) {
+    hero.addEventListener('pointermove', e => {
+      if (e.pointerType === 'touch') return;
+      const r = hero.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+      hero.style.setProperty('--mx', (x * 100).toFixed(1) + '%'); hero.style.setProperty('--my', (y * 100).toFixed(1) + '%');
+      const pr = phone.getBoundingClientRect(), px = (e.clientX - pr.left) / pr.width, py = (e.clientY - pr.top) / pr.height;
+      tilt.style.setProperty('--ry', ((x - .5) * 16 - 2).toFixed(2) + 'deg'); tilt.style.setProperty('--rx', ((.5 - y) * 10 + 2).toFixed(2) + 'deg');
+      phone.style.setProperty('--gx', (px * 100).toFixed(0) + '%'); phone.style.setProperty('--gy', (py * 100).toFixed(0) + '%');
+    });
+    hero.addEventListener('pointerleave', () => { tilt.style.removeProperty('--ry'); tilt.style.removeProperty('--rx'); });
+  }
+  if ('IntersectionObserver' in window) new IntersectionObserver(es => { es.forEach(en => { HM.seen = en.isIntersecting; if (en.isIntersecting && HM.on) hmStepNext(); else clearTimeout(HM.stepT); }); }, { root: $('#v-home'), threshold: .35 }).observe($('#hmHow'));
+  else HM.seen = true;
+}
+
+/* ---------- the AI option: the Workbench on this computer. Only works when this page is served by workbench.py ---------- */
+const WB = { token: (document.querySelector('meta[name="wb-token"]') || {}).content || '' };
+WB.live = !!WB.token && !WB.token.startsWith('__') && location.protocol !== 'file:';
+const wb = async (path, opt = {}) => {
+  const r = await fetch(path, { ...opt, headers: { 'X-Token': WB.token, ...(opt.headers || {}) } });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Request failed');
+  return j;
+};
+const AI = { stopped: false, otherKey: false, files: [], engine: 'rules', busy: false, job: '', t0: 0, clock: 0, poll: 0, audio: null, title0: document.title };
+const AI_STEPS = [['Read the script', /Read \d+ episodes/], ['Read the whole show once', /Reading the whole show/], ['Score every line', /episode \d+: /i],
+  ['Watch each clip like a stranger', /Cold viewer/], ['Rank the clips', /Ranking \d+ clips/], ['Write the reasons', /Writing one line/], ['Build the results page', /Building the results page/]];
+const aiErr = msg => { const e = $('#aiError'); e.textContent = msg || ''; show(e, !!msg); };
+function setMode(m) {
+  document.querySelectorAll('.run-modes button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode === m)));
+  show($('#modeBrowser'), m === 'browser'); show($('#modeAi'), m === 'ai');
+}
+function aiRender() {
+  const f = AI.files;
+  $('#aiFiles').innerHTML = f.length ? f.map(x => `<li>${esc(x.name)}</li>`).join('') + '<li><button class="pill" type="button" id="aiClear">Clear</button></li>' : '';
+  const c = $('#aiClear'); if (c) c.addEventListener('click', () => { AI.files = []; aiRender(); });
+  $('#aiRun').disabled = !f.length || AI.busy;
+}
+function aiAdd(list) {
+  const ok = [...list].filter(f => /\.(txt|zip)$/i.test(f.name));
+  if (!ok.length) return aiErr('Bring .txt episodes, a folder of them, or one .zip. Other formats are not read yet.');
+  const all = [...AI.files.map(x => x.file), ...ok], zips = all.filter(f => /\.zip$/i.test(f.name));
+  if (zips.length && all.length > 1) return aiErr('Bring either one .zip or several .txt episodes, not both.');
+  aiErr('');
+  const seen = new Map();
+  AI.files = all.map(f => { const n = (seen.get(f.name) || 0) + 1; seen.set(f.name, n); return { file: f, name: n > 1 ? `${n}-${f.name}` : f.name }; });
+  aiRender();
+}
+function aiPaintEngines() {
+  const box = $('#aiEngines'), E = WB.engines || {};
+  const note = v => !v.key ? 'Nothing leaves this computer' : (v.sends ? 'Sends the script text to ' + esc(v.sends.split(' (')[0]) + '. ' : '') + (v.ready ? 'Key found.' : 'Needs ' + esc(v.key) + (v.base ? ' and ' + esc(v.base) : '') + ' in the .env file, or paste a key below.');
+  box.innerHTML = Object.entries(E).map(([k, v]) => `<label><input type="radio" name="aiEng" value="${esc(k)}" ${k === AI.engine ? 'checked' : ''}><span><b>${esc(v.label)}</b><small>${note(v)}</small></span></label>`).join('');
+  box.querySelectorAll('input').forEach(r => r.addEventListener('change', () => { AI.engine = r.value; AI.otherKey = false; aiGate(); }));
+  aiGate();
+}
+function aiGate() {
+  const e = (WB.engines || {})[AI.engine] || {};
+  show($('#aiSends'), !!e.sends);
+  if (e.sends) $('#aiSendsText').textContent = 'This sends the text of your scripts to ' + e.sends + '.';
+  const found = !!e.key && !!e.ready && !AI.otherKey;                 // a key is already in the .env file: do not ask for one
+  show($('#aiModelWrap'), !!e.takes_model); show($('#aiBaseWrap'), !!e.base && !found); show($('#aiKeyWrap'), !!e.key && !found); show($('#aiKeyToggleWrap'), found);
+  $('#aiModel').placeholder = e.needs_model ? e.hint : (e.hint ? e.hint + ' (leave empty for this)' : '');
+}
+function aiTick() { const t = Math.floor((Date.now() - AI.t0) / 1000); $('#aiClock').textContent = Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); }
+function aiSteps(j) {
+  const text = (j.log || []).join('\n'), rules = AI.engine === 'rules';
+  const defs = rules ? [AI_STEPS[0], ['Find the best cut in every episode', /episode \d+: /i], AI_STEPS[6]] : AI_STEPS;
+  let at = -1; defs.forEach(([, re], i) => { if (re.test(text) || (re === AI_STEPS[6][1] && j.phase === 'Building the results page')) at = i; });
+  if (j.status === 'done') at = defs.length;
+  $('#aiSteps').innerHTML = defs.map(([n], i) => `<li class="${i < at ? 'done' : i === at ? 'now' : ''}">${esc(n)}</li>`).join('');
+}
+function notifyDone(text) {
+  document.title = '✓ ' + text;
+  const back = () => { if (!document.hidden) { document.title = AI.title0; document.removeEventListener('visibilitychange', back); } };
+  document.addEventListener('visibilitychange', back); setTimeout(() => { if (!document.hidden) document.title = AI.title0; }, 6000);
+  try {
+    const c = AI.audio; if (c) { if (c.state === 'suspended') c.resume(); [660, 880].forEach((f, i) => { const o = c.createOscillator(), g = c.createGain(), t = c.currentTime + i * .17;
+      o.frequency.value = f; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.12, t + .03); g.gain.exponentialRampToValueAtTime(.0001, t + .22); o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + .24); }); }
+  } catch (e) { /* no sound is fine */ }
+  toast(text);
+}
+function aiDone(j) {
+  clearInterval(AI.clock); clearTimeout(AI.poll); AI.busy = false; aiSteps(j); show($('#aiProg'), false); show($('#aiStart'), false);
+  const n = j.promos ?? 0, w = j.warnings || [];
+  $('#aiRTitle').textContent = $('#aiTitle').value.trim() || 'My show';
+  $('#aiRMeta').textContent = ' ' + (n ? `${plural(n, 'promo', 'promos')} shortlisted from ${plural(j.episodes ?? 0, 'episode', 'episodes')}.` : 'No promo passed the checks. The results list the timing-checked cuts an editor can still review.');
+  const wl = $('#aiWarn'); wl.innerHTML = w.map(x => `<li>${esc(x)}</li>`).join(''); show(wl, !!w.length);
+  $('#aiOpenFull').href = `/view/${j.id}/#/promos`;
+  const f = $('#aiView'); f.hidden = false; f.src = `/view/${j.id}/?embed=1`;
+  show($('#aiResult'), true); $('#aiAgain').focus();
+  notifyDone(n ? `Done: ${plural(n, 'promo', 'promos')}` : 'Done: no promo passed');
+}
+async function aiPoll() {
+  try {
+    const j = await wb('/api/job?id=' + AI.job); j.id = AI.job;
+    $('#aiPhase').textContent = j.phase || (j.status === 'queued' ? 'Starting' : 'Working'); $('#aiLog').textContent = (j.log || []).join('\n'); aiSteps(j);
+    const text = (j.log || []).join('\n'), hint = $('#aiHint');
+    const tip = /no credits|credits remaining|insufficient_quota/i.test(text) ? 'The provider says this account has no credits. The key is accepted, but the account needs credits or billing. Press Stop and add credits, or choose another engine.'
+      : /HTTP 401|Incorrect API key|invalid api key/i.test(text) ? 'The provider refused the key. Check that it is the right one, then press Stop and try again.' : '';
+    hint.textContent = tip; show(hint, !!tip);
+    if (j.status === 'cancelled') return;
+    if (j.status === 'done') return aiDone(j);
+    if (j.status === 'error') { clearInterval(AI.clock); AI.busy = false; show($('#aiProg'), false); aiErr(j.message); aiRender(); return; }
+  } catch (e) { clearInterval(AI.clock); AI.busy = false; show($('#aiProg'), false); aiErr('Lost contact with the Workbench: ' + e.message); aiRender(); return; }
+  AI.poll = setTimeout(aiPoll, 1500);
+}
+async function aiRun() {
+  aiErr('');
+  const e = (WB.engines || {})[AI.engine] || {};
+  if (!AI.files.length) return aiErr('Add the scripts first.');
+  if (e.sends && !$('#aiConfirm').checked) return aiErr('Tick the box to confirm you may send these scripts to ' + e.sends.split(' (')[0] + '.');
+  const model = $('#aiModel').value.trim(), key = $('#aiKey').value.trim(), base = $('#aiBase').value.trim();
+  if (e.needs_model && !model) return aiErr('Enter the model name for this endpoint.');
+  if (e.base && !base && !e.ready) return aiErr('Enter the endpoint address.');
+  if (e.key && !key && !e.ready) return aiErr('Paste an API key, or add ' + e.key + ' to the .env file.');
+  let eps = $('#aiEps').value.trim();
+  if (/^(all|\*)?$/i.test(eps)) eps = ''; else if (!/^[0-9,\- ]{1,40}$/.test(eps)) return aiErr('Episodes look like 1-5 or 2,7,33. Leave it empty for all.');
+  try { AI.audio = AI.audio || new (window.AudioContext || window.webkitAudioContext)(); } catch (err) { AI.audio = null; }
+  AI.stopped = false; show($('#aiHint'), false);
+  AI.busy = true; aiRender(); show($('#aiProg'), true); $('#aiPhase').textContent = 'Uploading the scripts'; $('#aiLog').textContent = ''; $('#aiSteps').innerHTML = '';
+  AI.t0 = Date.now(); aiTick(); clearInterval(AI.clock); AI.clock = setInterval(aiTick, 1000);
+  try {
+    const { id } = await wb('/api/new', { method: 'POST' }); AI.job = id;
+    for (const f of AI.files) if (!AI.stopped) await wb(`/api/upload?job=${id}&name=${encodeURIComponent(f.name)}`, { method: 'POST', body: await f.file.arrayBuffer() });
+    await wb('/api/run', { method: 'POST', body: JSON.stringify({ job: id, engine: AI.engine, episodes: eps, title: $('#aiTitle').value, confirm: $('#aiConfirm').checked, model, base_url: base, api_key: key }) });
+    $('#aiKey').value = '';                 // the key has left this page; do not leave it in the field
+    if (!AI.stopped) aiPoll();
+  } catch (err) { clearInterval(AI.clock); AI.busy = false; show($('#aiProg'), false); aiErr(err.message); aiRender(); }
+}
+async function aiStop() {
+  AI.stopped = true; clearTimeout(AI.poll); clearInterval(AI.clock);
+  try { if (AI.job) await wb('/api/cancel', { method: 'POST', body: JSON.stringify({ job: AI.job }) }); } catch (e) { /* the run may already be over */ }
+  AI.busy = false; show($('#aiProg'), false); aiErr('Stopped. Answers already received are cached, so running again picks up from there.'); aiRender();
+}
+function aiReset() {
+  clearTimeout(AI.poll); clearInterval(AI.clock); AI.busy = false; AI.files = []; AI.job = '';
+  const f = $('#aiView'); f.removeAttribute('src'); f.hidden = true;
+  show($('#aiResult'), false); show($('#aiProg'), false); show($('#aiStart'), true); aiErr(''); aiRender();
+  document.querySelectorAll('#modeAi input[type=file]').forEach(i => { i.value = ''; });
+}
+async function initAi() {
+  const label = (t, on) => { $('#aiState').textContent = t; const s = $('#hmAiState'); s.textContent = t; s.classList.toggle('on', !!on); };
+  document.querySelectorAll('.run-modes button').forEach(b => b.addEventListener('click', () => { location.hash = b.dataset.mode === 'ai' ? '#/run/ai' : '#/run'; }));
+  $('#aiBack').addEventListener('click', () => { location.hash = '#/run'; });
+  if (!WB.live) { label('Start the Workbench to turn this on', false); show($('#aiOff'), true); show($('#aiOn'), false); return; }
+  try { WB.engines = await wb('/api/engines'); }
+  catch (e) { WB.live = false; label('Workbench not reachable', false); show($('#aiOff'), true); show($('#aiOn'), false); return; }
+  label('Connected on this computer', true); show($('#aiOff'), false); show($('#aiOn'), true);
+  AI.engine = ['gemini', 'groq'].find(k => WB.engines[k] && WB.engines[k].ready) || 'rules';
+  const wanted = location.hash.replace(/^#\/?/, '').split('/')[2];          // #/run/ai/openai opens with that engine chosen and its key box ready
+  if (wanted && WB.engines[wanted]) AI.engine = wanted;
+  aiPaintEngines(); aiRender();
+  if (wanted && WB.engines[wanted] && WB.engines[wanted].key && !WB.engines[wanted].ready) setTimeout(() => { const k = $('#aiKey'); k.scrollIntoView({ block: 'center' }); k.focus(); }, 250);
+  const drop = $('#aiDrop');
+  $('#aiFileIn').addEventListener('change', e => { aiAdd(e.target.files); e.target.value = ''; });
+  $('#aiDirIn').addEventListener('change', e => { aiAdd(e.target.files); e.target.value = ''; });
+  ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', async e => { e.preventDefault(); aiAdd(await filesFromDrop(e.dataTransfer)); });
+  $('#aiExample').addEventListener('click', async () => {
+    try { const r = await fetch(rel('run/examples/the-last-edition.zip')); if (!r.ok) throw new Error('not bundled'); aiAdd([new File([await r.blob()], 'the-last-edition.zip', { type: 'application/zip' })]); $('#aiTitle').value = $('#aiTitle').value || 'The Last Edition'; }
+    catch (e) { aiErr('The made-up show is bundled with the full page only. Drop your own files instead.'); }
+  });
+  $('#aiKeyToggle').addEventListener('click', () => { AI.otherKey = true; aiGate(); $('#aiKey').focus(); });
+  $('#aiStop').addEventListener('click', aiStop);
+  $('#aiRun').addEventListener('click', aiRun);
+  $('#aiAgain').addEventListener('click', aiReset);
+}
+
 /* ---------- pages ---------- */
-const VIEWS = EMBED ? ['promos', 'season', 'quality'] : ['promos', 'season', 'quality', 'run', 'review'];
-const TITLES = { promos: 'Promos', season: 'Season', quality: 'Quality', run: 'Run it', review: 'Review (optional)' };
+const VIEWS = EMBED ? ['promos', 'season', 'quality'] : ['home', 'promos', 'season', 'quality', 'run', 'review'];
+const TITLES = { home: 'Find the promos in a microdrama', promos: 'Promos', season: 'Season', quality: 'Quality', run: 'Run it', review: 'Review (optional)' };
 function route() {
-  const parts = location.hash.replace(/^#\/?/, '').split('/'), h = parts[0] || 'promos';
-  const v = VIEWS.includes(h) ? h : 'promos';
+  const parts = location.hash.replace(/^#\/?/, '').split('/'), h = parts[0] || (EMBED ? 'promos' : 'home');
+  let v = VIEWS.includes(h) ? h : (EMBED ? 'promos' : 'home');
+  if (!EMBED && RESULT_VIEWS.includes(v) && !opened) { v = 'home'; history.replaceState(null, '', '#/'); }     // nothing is open yet: start from the landing page
   VIEWS.forEach(n => { $('#v-' + n).classList.toggle('on', n === v); });
   document.querySelectorAll('#nav a').forEach(a => { const on = a.dataset.nav === v; a.classList.toggle('on', on); if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   if (v === 'review') loadReview().then(() => window.PromoReview.start(parts[1] ? decodeURIComponent(parts[1]) : null)).catch(() => toast('The review studio could not load.'));
   else if (window.PromoReview) window.PromoReview.stop();
+  if (!EMBED) { if (v === 'home') hmStart(); else hmStop(); }
+  if (v === 'run') setMode(parts[1] === 'ai' ? 'ai' : 'browser');
   if (v === 'promos') { if (!reelT && $('#reelCard')) playReel(takes.slice(0, 3)); } else clearReel();
   const sc = $('#v-' + v); if (sc && v !== 'review') sc.scrollTop = 0;
-  document.title = TITLES[v] + ' · ' + D.show.title + ' · Promo Finder';
+  document.title = v === 'home' ? 'Promo Finder: ' + TITLES.home : v === 'run' ? 'Run it · Promo Finder' : TITLES[v] + ' · ' + D.show.title + ' · Promo Finder';
+  AI.title0 = document.title;
 }
 function init() {
   $('#showTitle').textContent = D.show.title;
   if (D.show.demo) $('#demoPill').hidden = false;
-  if (EMBED) { ['run', 'review'].forEach(n => { $('#v-' + n).remove(); const a = document.querySelector(`[data-nav="${n}"]`); if (a) a.remove(); }); }
+  $('.app').classList.toggle('opened', opened);
+  if (EMBED) { ['home', 'run', 'review'].forEach(n => { $('#v-' + n).remove(); const a = document.querySelector(`[data-nav="${n}"]`); if (a) a.remove(); }); }
   renderPromos(); renderSeason(); renderQuality();
-  if (!EMBED) initRun();
+  if (!EMBED) { initRun(); initHome(); initAi(); }
   window.addEventListener('hashchange', route);
-  if (location.hash.length <= 2) history.replaceState(null, '', '#/promos');
+  if (location.hash.length <= 2) history.replaceState(null, '', EMBED ? '#/promos' : '#/');
   route();
 }
 init();
